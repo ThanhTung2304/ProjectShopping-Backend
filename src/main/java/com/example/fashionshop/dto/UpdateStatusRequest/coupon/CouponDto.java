@@ -1,4 +1,4 @@
-package com.example.fashionshop.dto.coupon;
+package com.example.fashionshop.dto.UpdateStatusRequest.coupon;
 
 import com.example.fashionshop.entity.Coupon.DiscountType;
 import jakarta.validation.constraints.*;
