@@ -1,4 +1,4 @@
-package com.example.fashionshop.dto.review;
+package com.example.fashionshop.dto.UpdateStatusRequest.review;
 
 import jakarta.validation.constraints.*;
 import lombok.*;
