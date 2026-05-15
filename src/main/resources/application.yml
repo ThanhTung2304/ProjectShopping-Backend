@@ -1,0 +1,29 @@
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/fashion_store?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true
+    username: root
+    password: 123456  # đổi thành password MySQL của bạn
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update        # tự tạo bảng khi chạy
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  jackson:
+    time-zone: Asia/Ho_Chi_Minh
+    default-property-inclusion: non_null
+
+
+
+server:
+  port: 8080
+
+app:
+  jwt:
+    secret: fashionstore_super_secret_key_2024_do_not_share
+    expiration: 86400000      # 1 ngày (ms)
+
+

@@ -1,0 +1,256 @@
+-- ================================================
+-- FASHION STORE - Database Schema
+-- ================================================
+
+CREATE DATABASE IF NOT EXISTS fashion_store
+    CHARACTER SET utf8mb4
+    COLLATE utf8mb4_unicode_ci;
+
+USE fashion_store;
+
+-- ================================================
+-- 1. USERS
+-- ================================================
+CREATE TABLE IF NOT EXISTS users (
+    id            BIGINT AUTO_INCREMENT PRIMARY KEY,
+    full_name     VARCHAR(100)        NOT NULL,
+    email         VARCHAR(150)        NOT NULL UNIQUE,
+    password      VARCHAR(255)        NOT NULL,
+    phone         VARCHAR(20),
+    role          ENUM('CUSTOMER','ADMIN') NOT NULL DEFAULT 'CUSTOMER',
+    is_active     BOOLEAN             NOT NULL DEFAULT TRUE,
+    created_at    DATETIME            NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at    DATETIME            NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- ================================================
+-- 2. ADDRESSES
+-- ================================================
+CREATE TABLE IF NOT EXISTS addresses (
+    id            BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id       BIGINT              NOT NULL,
+    full_name     VARCHAR(100)        NOT NULL,
+    phone         VARCHAR(20)         NOT NULL,
+    province      VARCHAR(100)        NOT NULL,
+    district      VARCHAR(100)        NOT NULL,
+    ward          VARCHAR(100)        NOT NULL,
+    detail        VARCHAR(255)        NOT NULL,
+    is_default    BOOLEAN             NOT NULL DEFAULT FALSE,
+    CONSTRAINT fk_address_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- ================================================
+-- 3. CATEGORIES
+-- ================================================
+CREATE TABLE IF NOT EXISTS categories (
+    id            BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name          VARCHAR(100)        NOT NULL,
+    slug          VARCHAR(120)        NOT NULL UNIQUE,
+    parent_id     BIGINT,
+    image_url     VARCHAR(500),
+    is_active     BOOLEAN             NOT NULL DEFAULT TRUE,
+    CONSTRAINT fk_category_parent FOREIGN KEY (parent_id) REFERENCES categories(id) ON DELETE SET NULL
+);
+
+-- ================================================
+-- 4. PRODUCTS
+-- ================================================
+CREATE TABLE IF NOT EXISTS products (
+    id            BIGINT AUTO_INCREMENT PRIMARY KEY,
+    category_id   BIGINT              NOT NULL,
+    name          VARCHAR(200)        NOT NULL,
+    slug          VARCHAR(220)        NOT NULL UNIQUE,
+    description   TEXT,
+    is_active     BOOLEAN             NOT NULL DEFAULT TRUE,
+    created_at    DATETIME            NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at    DATETIME            NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_product_category FOREIGN KEY (category_id) REFERENCES categories(id)
+);
+
+-- ================================================
+-- 5. PRODUCT VARIANTS (size + color + price + stock)
+-- ================================================
+CREATE TABLE IF NOT EXISTS product_variants (
+    id             BIGINT AUTO_INCREMENT PRIMARY KEY,
+    product_id     BIGINT              NOT NULL,
+    size           VARCHAR(10)         NOT NULL COMMENT 'S, M, L, XL, XXL',
+    color          VARCHAR(50)         NOT NULL,
+    price          DECIMAL(12,2)       NOT NULL,
+    sale_price     DECIMAL(12,2)                COMMENT 'Giá khuyến mãi, NULL nếu không có',
+    stock_quantity INT                 NOT NULL DEFAULT 0,
+    sku            VARCHAR(100)        NOT NULL UNIQUE,
+    is_active      BOOLEAN             NOT NULL DEFAULT TRUE,
+    CONSTRAINT fk_variant_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+);
+
+-- ================================================
+-- 6. PRODUCT IMAGES
+-- ================================================
+CREATE TABLE IF NOT EXISTS product_images (
+    id            BIGINT AUTO_INCREMENT PRIMARY KEY,
+    product_id    BIGINT              NOT NULL,
+    image_url     VARCHAR(500)        NOT NULL,
+    is_primary    BOOLEAN             NOT NULL DEFAULT FALSE,
+    sort_order    INT                 NOT NULL DEFAULT 0,
+    CONSTRAINT fk_image_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+);
+
+-- ================================================
+-- 7. CART ITEMS
+-- ================================================
+CREATE TABLE IF NOT EXISTS cart_items (
+    id            BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id       BIGINT              NOT NULL,
+    variant_id    BIGINT              NOT NULL,
+    quantity      INT                 NOT NULL DEFAULT 1,
+    created_at    DATETIME            NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_cart_user    FOREIGN KEY (user_id)    REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_cart_variant FOREIGN KEY (variant_id) REFERENCES product_variants(id) ON DELETE CASCADE,
+    CONSTRAINT uq_cart_user_variant UNIQUE (user_id, variant_id)
+);
+
+-- ================================================
+-- 8. ORDERS
+-- ================================================
+CREATE TABLE IF NOT EXISTS orders (
+    id               BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id          BIGINT              NOT NULL,
+    order_code       VARCHAR(20)         NOT NULL UNIQUE,
+    status           ENUM(
+                         'PENDING',
+                         'CONFIRMED',
+                         'SHIPPING',
+                         'DELIVERED',
+                         'CANCELLED'
+                     )                   NOT NULL DEFAULT 'PENDING',
+    total_amount     DECIMAL(14,2)       NOT NULL,
+    shipping_fee     DECIMAL(10,2)       NOT NULL DEFAULT 0,
+    discount_amount  DECIMAL(10,2)       NOT NULL DEFAULT 0,
+    final_amount     DECIMAL(14,2)       NOT NULL,
+    shipping_name    VARCHAR(100)        NOT NULL,
+    shipping_phone   VARCHAR(20)         NOT NULL,
+    shipping_address VARCHAR(500)        NOT NULL,
+    note             TEXT,
+    ordered_at       DATETIME            NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at       DATETIME            NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_order_user FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+-- ================================================
+-- 9. ORDER ITEMS
+-- ================================================
+CREATE TABLE IF NOT EXISTS order_items (
+    id            BIGINT AUTO_INCREMENT PRIMARY KEY,
+    order_id      BIGINT              NOT NULL,
+    variant_id    BIGINT              NOT NULL,
+    product_name  VARCHAR(200)        NOT NULL COMMENT 'Lưu lại tên lúc đặt, tránh thay đổi sau',
+    size          VARCHAR(10)         NOT NULL,
+    color         VARCHAR(50)         NOT NULL,
+    quantity      INT                 NOT NULL,
+    unit_price    DECIMAL(12,2)       NOT NULL COMMENT 'Giá lúc đặt hàng',
+    subtotal      DECIMAL(14,2)       NOT NULL,
+    CONSTRAINT fk_item_order   FOREIGN KEY (order_id)   REFERENCES orders(id) ON DELETE CASCADE,
+    CONSTRAINT fk_item_variant FOREIGN KEY (variant_id) REFERENCES product_variants(id)
+);
+
+-- ================================================
+-- 10. PAYMENTS
+-- ================================================
+CREATE TABLE IF NOT EXISTS payments (
+    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+    order_id        BIGINT              NOT NULL UNIQUE,
+    method          ENUM('COD','BANK_TRANSFER','MOMO','VNPAY') NOT NULL,
+    status          ENUM('PENDING','PAID','FAILED','REFUNDED')  NOT NULL DEFAULT 'PENDING',
+    amount          DECIMAL(14,2)       NOT NULL,
+    transaction_id  VARCHAR(100)        COMMENT 'Mã giao dịch từ cổng thanh toán',
+    paid_at         DATETIME,
+    CONSTRAINT fk_payment_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+);
+
+-- ================================================
+-- 11. REVIEWS
+-- ================================================
+CREATE TABLE IF NOT EXISTS reviews (
+    id            BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id       BIGINT              NOT NULL,
+    product_id    BIGINT              NOT NULL,
+    order_id      BIGINT              NOT NULL,
+    rating        TINYINT             NOT NULL CHECK (rating BETWEEN 1 AND 5),
+    comment       TEXT,
+    created_at    DATETIME            NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_review_user    FOREIGN KEY (user_id)    REFERENCES users(id),
+    CONSTRAINT fk_review_product FOREIGN KEY (product_id) REFERENCES products(id),
+    CONSTRAINT fk_review_order   FOREIGN KEY (order_id)   REFERENCES orders(id),
+    CONSTRAINT uq_review UNIQUE (user_id, product_id, order_id)
+);
+
+-- ================================================
+-- 12. COUPONS (mã giảm giá)
+-- ================================================
+CREATE TABLE IF NOT EXISTS coupons (
+    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+    code            VARCHAR(50)         NOT NULL UNIQUE,
+    discount_type   ENUM('PERCENT','FIXED') NOT NULL,
+    discount_value  DECIMAL(10,2)       NOT NULL,
+    min_order_value DECIMAL(12,2)       NOT NULL DEFAULT 0,
+    max_discount    DECIMAL(10,2)       COMMENT 'Giới hạn tối đa nếu là PERCENT',
+    usage_limit     INT                 NOT NULL DEFAULT 1,
+    used_count      INT                 NOT NULL DEFAULT 0,
+    start_date      DATE                NOT NULL,
+    end_date        DATE                NOT NULL,
+    is_active       BOOLEAN             NOT NULL DEFAULT TRUE
+);
+
+-- ================================================
+-- SAMPLE DATA
+-- ================================================
+
+-- Admin account (password: Admin@123 — đã hash bằng BCrypt)
+INSERT INTO users (full_name, email, password, phone, role) VALUES
+('Admin', 'admin@fashionstore.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lh', '0900000000', 'ADMIN');
+
+-- Categories
+INSERT INTO categories (name, slug, parent_id) VALUES
+('Áo',       'ao',       NULL),
+('Quần',     'quan',     NULL),
+('Phụ kiện', 'phu-kien', NULL);
+
+INSERT INTO categories (name, slug, parent_id) VALUES
+('Áo thun',   'ao-thun',   1),
+('Áo sơ mi',  'ao-so-mi',  1),
+('Áo khoác',  'ao-khoac',  1),
+('Quần jean', 'quan-jean', 2),
+('Quần short','quan-short', 2);
+
+-- Sample products
+INSERT INTO products (category_id, name, slug, description) VALUES
+(4, 'Áo thun basic trắng',   'ao-thun-basic-trang',   'Áo thun cotton 100%, thoáng mát, phù hợp mặc hàng ngày'),
+(4, 'Áo thun oversize đen',  'ao-thun-oversize-den',  'Form oversize phong cách, chất liệu cotton cao cấp'),
+(5, 'Áo sơ mi kẻ sọc',       'ao-so-mi-ke-soc',       'Áo sơ mi kẻ sọc năng động, phù hợp đi làm và đi chơi'),
+(7, 'Quần jean slim fit',     'quan-jean-slim-fit',    'Quần jean co giãn, tôn dáng, bền màu');
+
+-- Variants for áo thun basic trắng
+INSERT INTO product_variants (product_id, size, color, price, stock_quantity, sku) VALUES
+(1, 'S',  'Trắng', 150000, 50, 'ATB-TRANG-S'),
+(1, 'M',  'Trắng', 150000, 80, 'ATB-TRANG-M'),
+(1, 'L',  'Trắng', 150000, 60, 'ATB-TRANG-L'),
+(1, 'XL', 'Trắng', 160000, 30, 'ATB-TRANG-XL');
+
+-- Variants for áo thun oversize đen
+INSERT INTO product_variants (product_id, size, color, price, sale_price, stock_quantity, sku) VALUES
+(2, 'M',  'Đen', 200000, 170000, 40, 'ATO-DEN-M'),
+(2, 'L',  'Đen', 200000, 170000, 55, 'ATO-DEN-L'),
+(2, 'XL', 'Đen', 210000, 180000, 25, 'ATO-DEN-XL');
+
+-- Variants for quần jean
+INSERT INTO product_variants (product_id, size, color, price, stock_quantity, sku) VALUES
+(4, '28', 'Xanh đậm', 350000, 30, 'QJ-SLIM-28'),
+(4, '29', 'Xanh đậm', 350000, 45, 'QJ-SLIM-29'),
+(4, '30', 'Xanh đậm', 350000, 50, 'QJ-SLIM-30'),
+(4, '31', 'Xanh đậm', 360000, 20, 'QJ-SLIM-31'),
+(4, '32', 'Xanh đậm', 360000, 15, 'QJ-SLIM-32');
+
+-- Coupons
+INSERT INTO coupons (code, discount_type, discount_value, min_order_value, max_discount, usage_limit, start_date, end_date) VALUES
+('WELCOME10', 'PERCENT', 10, 200000, 50000,  100, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 30 DAY)),
+('SALE50K',   'FIXED',   50000, 300000, NULL, 200, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 15 DAY));
