@@ -11,14 +11,14 @@ import lombok.*;
 @Getter @Setter
 @Builder
 @AllArgsConstructor
-public class ApiPesponse<T> {
+public class ApiResponse<T> {
     private boolean success;
     private String message;
     private T data;
 
     //Thành công có data
-    public static <T> ApiPesponse<T> success(T data) {
-        return ApiPesponse.<T>builder()
+    public static <T> ApiResponse<T> success(T data) {
+        return ApiResponse.<T>builder()
                 .success(true)
                 .message("Success")
                 .data(data)
@@ -26,8 +26,8 @@ public class ApiPesponse<T> {
     }
 
     //Thành cng có data + message tùy chỉnh
-    public static <T> ApiPesponse<T> success(String message, T data) {
-        return ApiPesponse.<T>builder()
+    public static <T> ApiResponse<T> success(String message, T data) {
+        return ApiResponse.<T>builder()
                 .success(true)
                 .message(message)
                 .data(data)
@@ -35,8 +35,8 @@ public class ApiPesponse<T> {
     }
 
     // Thành công không có data (vd: xóa)
-    public static <T> ApiPesponse<T> success() {
-        return ApiPesponse.<T>builder()
+    public static <T> ApiResponse<T> success() {
+        return ApiResponse.<T>builder()
                 .success(true)
                 .message("Success")
                 .data(null)
