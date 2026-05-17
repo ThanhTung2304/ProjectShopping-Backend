@@ -57,6 +57,9 @@ public class GlobalExceptionHandler {
     // ===== Bắt tất cả lỗi còn lại =====
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleException(Exception ex) {
+        System.err.println("=== UNHANDLED EXCEPTION: " + ex.getClass().getName()); // ← DEBUG
+        ex.printStackTrace();                                                         // ← DEBUG
+
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ErrorResponse.of(
@@ -72,12 +75,10 @@ public class GlobalExceptionHandler {
             String message,
             Map<String, String> errors
     ) {
-        // Lỗi thông thường
         static ErrorResponse of(String code, String message) {
             return new ErrorResponse(false, code, message, null);
         }
 
-        // Lỗi validation (có danh sách field lỗi)
         static ErrorResponse ofValidation(Map<String, String> errors) {
             return new ErrorResponse(false,
                     ErrorCode.VALIDATION_ERROR.name(),
