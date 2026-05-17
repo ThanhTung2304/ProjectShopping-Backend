@@ -27,17 +27,17 @@ public class JwtUtil {
     private long expiration;
 
     // Tạo SecretKey từ chuỗi secret trong application.yml
-    private SecretKey getSigningKey(){
-        return Keys.hmacShaKeyFor(Decoders.BASE64.decode(secretKey));
+    private SecretKey getSigningKey() {
+        return Keys.hmacShaKeyFor(Decoders.BASE64URL.decode(secretKey)); // ← BASE64URL thay vì BASE64
     }
 
     // Tạo token từ email (subject)
     public String generateToken(String email) {
-        return io.jsonwebtoken.Jwts.builder()
-                .setSubject(email)
+        return Jwts.builder()
+                .subject(email)
                 .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(getSigningKey())
-                .setExpiration(new java.util.Date(System.currentTimeMillis() + expiration))
                 .compact();
     }
 
@@ -65,4 +65,6 @@ public class JwtUtil {
                 .parseSignedClaims(token)
                 .getPayload();
     }
+
+
 }
