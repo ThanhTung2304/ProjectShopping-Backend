@@ -5,6 +5,7 @@ spring:
     password: 123456  # đổi thành password MySQL của bạn
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: update        # tự tạo bảng khi chạy
     show-sql: true
