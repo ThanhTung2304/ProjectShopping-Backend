@@ -47,7 +47,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             String email = jwtUtil.extractEmail(token);
 
             // Chưa authenticate trong session hiện tại
-            if(email == null && SecurityContextHolder.getContext().getAuthentication() == null){
+            if(email != null && SecurityContextHolder.getContext().getAuthentication() == null){
                 UserDetails userDetails = userDetailsService.loadUserByUsername(email);
 
                 if(jwtUtil.validateToken(token, userDetails)){

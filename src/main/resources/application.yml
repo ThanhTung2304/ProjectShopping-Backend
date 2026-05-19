@@ -8,7 +8,7 @@ spring:
     open-in-view: false
     hibernate:
       ddl-auto: update        # tự tạo bảng khi chạy
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         format_sql: true
@@ -16,7 +16,6 @@ spring:
   jackson:
     time-zone: Asia/Ho_Chi_Minh
     default-property-inclusion: non_null
-
 
 
 server:
