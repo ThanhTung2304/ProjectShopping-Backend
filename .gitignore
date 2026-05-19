@@ -32,7 +32,9 @@ build/
 ### VS Code ###
 .vscode/
 
-### Sensitive config — KHÔNG commit lên Git ###
+# Config nhạy cảm
 src/main/resources/application-dev.yml
-src/main/resources/application-local.yml
+src/main/resources/application-prod.yml
+
+# Env
 .env
