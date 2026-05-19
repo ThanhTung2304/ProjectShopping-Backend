@@ -31,3 +31,10 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Config nhạy cảm
+src/main/resources/application-dev.yml
+src/main/resources/application-prod.yml
+
+# Env
+.env
