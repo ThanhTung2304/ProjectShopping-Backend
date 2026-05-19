@@ -28,7 +28,7 @@ public class JwtUtil {
 
     // Tạo SecretKey từ chuỗi secret trong application.yml
     private SecretKey getSigningKey() {
-        return Keys.hmacShaKeyFor(Decoders.BASE64URL.decode(secretKey)); // ← BASE64URL thay vì BASE64
+        return Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
     }
 
     // Tạo token từ email (subject)
