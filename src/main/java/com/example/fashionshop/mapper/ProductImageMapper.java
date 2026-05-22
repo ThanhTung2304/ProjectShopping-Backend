@@ -8,7 +8,7 @@ import java.util.List;
 
 //// Tạm dùng VariantDto.ImageDto vì ImageDto nằm trong file VariantDto
 //// Nếu tách file riêng thì import ImageDto.Response trực tiếp
-//@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring")
 public interface ProductImageMapper {
 
     // MapStruct tự map vì tên field giống nhau
