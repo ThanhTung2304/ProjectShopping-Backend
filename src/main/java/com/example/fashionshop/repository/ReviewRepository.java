@@ -22,4 +22,7 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     // Đếm số lượng review theo từng sao
     @Query("SELECT r.rating, COUNT(r) FROM Review r WHERE r.product.id = :productId GROUP BY r.rating ORDER BY r.rating DESC")
     java.util.List<Object[]> countReviewsByRating(Long productId);
+
+    // Đếm tổng số review của sản phẩm
+    long countByProductId(Long productId);
 }
