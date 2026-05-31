@@ -1,4 +1,4 @@
-package com.example.fashionshop.dto.Category;
+package com.example.fashionshop.dto.category;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;

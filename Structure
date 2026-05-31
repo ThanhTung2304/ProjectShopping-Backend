@@ -1,0 +1,92 @@
+CLIENT (Postman / Frontend)
+        │
+        │ HTTP Request
+        ▼
+┌─────────────────────────────┐
+│       JwtAuthFilter         │  ← Đọc token từ header
+│  (config/JwtAuthFilter.java)│  ← Validate token
+└─────────────┬───────────────┘
+              │
+              ▼
+┌─────────────────────────────┐
+│       SecurityConfig        │  ← Kiểm tra quyền
+│  /api/products → permitAll  │  ← ADMIN? CUSTOMER?
+│  /api/cart → CUSTOMER only  │
+└─────────────┬───────────────┘
+              │
+              ▼
+┌─────────────────────────────┐
+│        CONTROLLER           │  ← Nhận request
+│   @RestController           │  ← Validate DTO (@Valid)
+│   @RequestMapping           │  ← Gọi Service
+└─────────────┬───────────────┘
+              │
+              ▼
+┌─────────────────────────────┐
+│          SERVICE            │  ← Xử lý logic nghiệp vụ
+│   @Service                  │  ← Kiểm tra điều kiện
+│   @Transactional            │  ← Throw exception nếu lỗi
+└──────┬──────────────┬───────┘
+       │              │
+       ▼              ▼
+┌────────────┐  ┌────────────┐
+│ REPOSITORY │  │   MAPPER   │  ← Convert Entity ↔ DTO
+│ (truy vấn)│  │            │
+└─────┬──────┘  └────────────┘
+      │
+      ▼
+┌─────────────────────────────┐
+│          DATABASE           │  ← MySQL (Docker)
+│       (fashion_store)       │
+└─────────────────────────────┘
+      │
+      │ Trả data ngược lên
+      ▼
+SERVICE → MAPPER → CONTROLLER → CLIENT
+
+------------------------------------------------------------------------------------------------------------------
+
+Luồng cụ thể: Đăng nhập
+POST /api/auth/login
+{ email, password }
+        │
+        ▼
+JwtAuthFilter
+  → Không có token → bỏ qua, đi tiếp
+        │
+        ▼
+SecurityConfig
+  → /api/auth/** → permitAll() → cho qua
+        │
+        ▼
+AuthController.login()
+  → Gọi authService.login(request)
+        │
+        ▼
+AuthServiceImpl.login()
+  1. AuthenticationManager.authenticate()
+     → UserDetailsServiceImpl.loadUserByUsername(email)
+     → Tìm User trong DB
+     → So sánh password BCrypt
+     → Sai → throw INVALID_CREDENTIALS
+  2. Kiểm tra isActive
+  3. JwtUtil.generateToken(email)
+     → Tạo JWT token
+        │
+        ▼
+AuthController
+  → Trả AuthResponse { token, email, role }
+        │
+        ▼
+CLIENT lưu token → dùng cho request tiếp theo
+
+------------------------------------------------------------------------------------------------------------------
+
+Tầng            Trách nhiệm                        Không được làm
+
+Controller      Nhận request, trả response         Chứa logic nghiệp vụ
+Service         Xử lý logic, kiểm tra điều kiện    Truy vấn DB trực tiếp
+Repository      Truy vấn DB                        Chứa logic
+Mapper          Convert Entity ↔ DTO               Gọi DB hay chứa logic
+Entity          Ánh xạ bảng DB                     Chứa logic nghiệp vụ
+DTO             Truyền dữ liệu                     Kết nối DB
