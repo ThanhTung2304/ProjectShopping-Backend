@@ -42,4 +42,12 @@ public class ApiResponse<T> {
                 .data(null)
                 .build();
     }
+
+    public static ApiResponse<Void> ok(String message) {
+        return ApiResponse.<Void>builder()
+                .success(true)
+                .message(message)
+                .data(null)
+                .build();
+    }
 }

@@ -1,0 +1,59 @@
+🔓 Auth (public)
+POST /api/auth/register     Đăng ký
+POST /api/auth/login        Đăng nhập
+
+👤 User (cần đăng nhập)
+GET    /api/users/profile           Xem profile
+PUT    /api/users/profile           Cập nhật profile
+PUT    /api/users/change-password   Đổi mật khẩu
+
+🏠 Address (cần đăng nhập)
+GET    /api/addresses           Danh sách địa chỉ
+POST   /api/addresses           Thêm địa chỉ
+PUT    /api/addresses/{id}      Sửa địa chỉ
+DELETE /api/addresses/{id}      Xóa địa chỉ
+PATCH  /api/addresses/{id}/default  Đặt mặc định
+
+🗂️ Category (GET public, POST/PUT/DELETE admin)
+GET    /api/categories          Danh sách danh mục
+GET    /api/categories/{id}     Chi tiết danh mục
+POST   /api/categories          Tạo danh mục
+PUT    /api/categories/{id}     Sửa danh mục
+DELETE /api/categories/{id}     Xóa danh mục
+
+👕 Product (GET public, thêm/sửa/xóa admin)
+GET    /api/products                        Danh sách + filter
+GET    /api/products/{slug}                 Chi tiết theo slug
+GET    /api/products/id/{id}               Chi tiết theo id
+POST   /api/products                        Tạo sản phẩm
+PUT    /api/products/{id}                   Sửa sản phẩm
+DELETE /api/products/{id}                   Xóa sản phẩm
+POST   /api/products/{id}/variants          Thêm variant
+PUT    /api/products/variants/{id}          Sửa variant
+DELETE /api/products/variants/{id}          Xóa variant
+
+🛒 Cart (cần đăng nhập)
+GET    /api/cart        Xem giỏ hàng
+POST   /api/cart        Thêm vào giỏ
+PUT    /api/cart/{id}   Cập nhật số lượng
+DELETE /api/cart/{id}   Xóa 1 sản phẩm
+DELETE /api/cart        Xóa cả giỏ
+
+📦 Order (cần đăng nhập)
+POST   /api/orders              Đặt hàng
+GET    /api/orders              Lịch sử đơn hàng
+GET    /api/orders/{id}         Chi tiết đơn hàng
+PATCH  /api/orders/{id}/cancel  Hủy đơn
+GET    /api/orders/admin            (admin) Tất cả đơn
+PATCH  /api/orders/admin/{id}/status (admin) Cập nhật trạng thái
+
+⭐ Review
+GET    /api/reviews/product/{id}          Danh sách đánh giá
+GET    /api/reviews/product/{id}/summary  Tổng hợp rating
+POST   /api/reviews                       Viết đánh giá
+
+🎟️ Coupon
+POST   /api/coupons/apply    Áp dụng mã giảm giá
+POST   /api/coupons          (admin) Tạo mã
+PUT    /api/coupons/{id}     (admin) Sửa mã
+DELETE /api/coupons/{id}     (admin) Xóa mã
