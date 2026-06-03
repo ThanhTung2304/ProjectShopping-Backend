@@ -4,6 +4,7 @@ import com.example.fashionshop.dto.product.ProductDto;
 import com.example.fashionshop.dto.product.VariantDto;
 import com.example.fashionshop.entity.Category;
 import com.example.fashionshop.entity.Product;
+import com.example.fashionshop.entity.ProductImage;
 import com.example.fashionshop.entity.ProductVariant;
 import com.example.fashionshop.exception.AppException;
 import com.example.fashionshop.exception.ErrorCode;
@@ -35,40 +36,56 @@ public class ProductServiceImpl implements ProductService {
     // Danh sách sản phẩm (có filter + phân trang)
     // ========================
     @Override
+    @Transactional(readOnly = true)
     public Page<ProductDto.Summary> getProducts(String keyword, Long categoryId,
                                                 BigDecimal minPrice, BigDecimal maxPrice,
                                                 String size, String color, Pageable pageable) {
+
         return productRepositoryCustom
                 .searchProducts(keyword, categoryId, minPrice, maxPrice, size, color, pageable)
                 .map(product -> {
+
                     ProductDto.Summary summary = productMapper.toSummary(product);
 
-                    // Tính giá min/max từ variants
                     var variants = product.getVariants();
-                    if (variants != null && !variants.isEmpty()) {
-                        BigDecimal min = variants.stream()
-                                .map(v -> v.getSalePrice() != null ? v.getSalePrice() : v.getPrice())
-                                .min(BigDecimal::compareTo).orElse(BigDecimal.ZERO);
-                        BigDecimal max = variants.stream()
-                                .map(v -> v.getPrice())
-                                .max(BigDecimal::compareTo).orElse(BigDecimal.ZERO);
 
-                        // Set qua builder vì Summary dùng @Builder
+                    if (variants != null && !variants.isEmpty()) {
+
+                        BigDecimal min = variants.stream()
+                                .map(v -> v.getSalePrice() != null
+                                        ? v.getSalePrice()
+                                        : v.getPrice())
+                                .min(BigDecimal::compareTo)
+                                .orElse(BigDecimal.ZERO);
+
+                        BigDecimal max = variants.stream()
+                                .map(ProductVariant::getPrice)
+                                .max(BigDecimal::compareTo)
+                                .orElse(BigDecimal.ZERO);
+
                         return ProductDto.Summary.builder()
                                 .id(summary.getId())
                                 .name(summary.getName())
                                 .slug(summary.getSlug())
                                 .categoryName(summary.getCategoryName())
-                                .primaryImageUrl(product.getImages().stream()
-                                        .filter(img -> img.getIsPrimary())
-                                        .map(img -> img.getImageUrl())
-                                        .findFirst().orElse(null))
+                                .primaryImageUrl(
+                                        product.getImages().stream()
+                                                .filter(ProductImage::getIsPrimary)
+                                                .map(ProductImage::getImageUrl)
+                                                .findFirst()
+                                                .orElse(null)
+                                )
                                 .minPrice(min)
                                 .maxPrice(max)
-                                .averageRating(reviewRepository.findAverageRatingByProductId(product.getId()))
-                                .totalReviews((int) reviewRepository.countByProductId(product.getId()))
+                                .averageRating(
+                                        reviewRepository.findAverageRatingByProductId(product.getId())
+                                )
+                                .totalReviews(
+                                        (int) reviewRepository.countByProductId(product.getId())
+                                )
                                 .build();
                     }
+
                     return summary;
                 });
     }
