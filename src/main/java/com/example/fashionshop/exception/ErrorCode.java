@@ -43,6 +43,7 @@ public enum ErrorCode {
     ORDER_NOT_FOUND             (HttpStatus.NOT_FOUND,           "Không tìm thấy đơn hàng"),
     ORDER_NOT_BELONG_TO_USER    (HttpStatus.FORBIDDEN,           "Đơn hàng không thuộc về người dùng này"),
     ORDER_CANNOT_CANCEL         (HttpStatus.BAD_REQUEST,         "Đơn hàng không thể hủy ở trạng thái hiện tại"),
+    ORDER_INVALID_STATUS_TRANSITION (HttpStatus.BAD_REQUEST,      "Trạng thái đơn hàng không hợp lệ"),
     ORDER_CODE_EXISTS           (HttpStatus.INTERNAL_SERVER_ERROR, "Mã đơn hàng bị trùng, vui lòng thử lại"),
 
     // ===== PAYMENT =====

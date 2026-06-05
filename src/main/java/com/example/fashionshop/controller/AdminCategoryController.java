@@ -14,42 +14,24 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
-@RequestMapping("/api/categories")
+@RequestMapping("/api/admin/categories")
 @RequiredArgsConstructor
-public class CategoryController {
+@PreAuthorize("hasRole('ADMIN')")
+public class AdminCategoryController {
 
     private final CategoryRepository categoryRepository;
     private final CategoryMapper categoryMapper;
-
-    @GetMapping
-    public ResponseEntity<ApiResponse<List<CategoryDto.ResponseWithChildren>>> getCategories() {
-
-        List<Category> roots =
-                categoryRepository.findRootCategoriesWithChildren();
-
-        List<CategoryDto.ResponseWithChildren> result =
-                roots.stream()
-                        .map(categoryMapper::toResponseWithChildren)
-                        .toList();
-
-        return ResponseEntity.ok(ApiResponse.success(result));
-    }
 
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<CategoryDto.Response>> getCategory(@PathVariable Long id) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
 
-        return ResponseEntity.ok(
-                ApiResponse.success(categoryMapper.toResponse(category))
-        );
+        return ResponseEntity.ok(ApiResponse.success(categoryMapper.toResponse(category)));
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<CategoryDto.Response>> createCategory(
             @Valid @RequestBody CategoryDto.Request request) {
 
@@ -58,7 +40,6 @@ public class CategoryController {
         }
 
         Category parent = null;
-
         if (request.getParentId() != null) {
             parent = categoryRepository.findById(request.getParentId())
                     .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
@@ -75,14 +56,11 @@ public class CategoryController {
         category = categoryRepository.save(category);
 
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(
-                        "Tạo danh mục thành công",
-                        categoryMapper.toResponse(category)
-                ));
+                .body(ApiResponse.success("Tao danh muc thanh cong",
+                        categoryMapper.toResponse(category)));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<CategoryDto.Response>> updateCategory(
             @PathVariable Long id,
             @Valid @RequestBody CategoryDto.Request request) {
@@ -96,7 +74,6 @@ public class CategoryController {
         }
 
         Category parent = null;
-
         if (request.getParentId() != null) {
             parent = categoryRepository.findById(request.getParentId())
                     .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
@@ -113,27 +90,18 @@ public class CategoryController {
 
         category = categoryRepository.save(category);
 
-        return ResponseEntity.ok(
-                ApiResponse.success(
-                        "Cập nhật danh mục thành công",
-                        categoryMapper.toResponse(category)
-                )
-        );
+        return ResponseEntity.ok(ApiResponse.success("Cap nhat danh muc thanh cong",
+                categoryMapper.toResponse(category)));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> deleteCategory(@PathVariable Long id) {
-
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
 
         category.setIsActive(false);
-
         categoryRepository.save(category);
 
-        return ResponseEntity.ok(
-                ApiResponse.ok("Xóa danh mục thành công")
-        );
+        return ResponseEntity.ok(ApiResponse.ok("Xoa danh muc thanh cong"));
     }
 }
