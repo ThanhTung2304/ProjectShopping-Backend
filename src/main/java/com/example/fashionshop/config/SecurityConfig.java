@@ -64,11 +64,27 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/categories/**").hasRole("ADMIN")
 
                         // ===== CUSTOMER =====
-                        .requestMatchers("/api/cart/**").hasRole("CUSTOMER")
-                        .requestMatchers("/api/orders/**").authenticated()
-                        .requestMatchers("/api/addresses/**").authenticated()
-                        .requestMatchers("/api/reviews/**").authenticated()
-                        .requestMatchers("/api/users/**").authenticated()
+//                        .requestMatchers("/api/cart/**").hasRole("CUSTOMER")
+//                        .requestMatchers("/api/orders/**").authenticated()
+//                        .requestMatchers("/api/addresses/**").authenticated()
+//                        .requestMatchers("/api/reviews/**").authenticated()
+//                        .requestMatchers("/api/users/**").authenticated()
+
+
+                        .requestMatchers("/api/cart/**")
+                        .hasAnyRole("CUSTOMER", "ADMIN")
+
+                        .requestMatchers("/api/orders/**")
+                        .hasAnyRole("CUSTOMER", "ADMIN")
+
+                        .requestMatchers("/api/addresses/**")
+                        .hasAnyRole("CUSTOMER", "ADMIN")
+
+                        .requestMatchers("/api/reviews/**")
+                        .authenticated()
+
+                        .requestMatchers("/api/users/**")
+                        .authenticated()
 
                         .anyRequest().authenticated()
                 )

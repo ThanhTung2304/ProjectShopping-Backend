@@ -25,5 +25,6 @@ app:
   jwt:
     secret: fashionstore_super_secret_key_2024_do_not_share
     expiration: 86400000      # 1 ngày (ms)
-
+  order:
+    shipping-fee: 30000
 

@@ -10,6 +10,7 @@ import com.example.fashionshop.service.CartService;
 import com.example.fashionshop.service.CouponService;
 import com.example.fashionshop.service.OrderService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -18,8 +19,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -35,6 +38,9 @@ public class OrderServiceImpl implements OrderService {
     private final CouponService couponService;
     private final CartService cartService;
     private final OrderMapper orderMapper;
+
+    @Value("${app.order.shipping-fee:30000}")
+    private BigDecimal shippingFee;
 
     // ========================
     // Đặt hàng
@@ -70,7 +76,6 @@ public class OrderServiceImpl implements OrderService {
         }
 
         // 4. Tính giảm giá từ coupon
-        BigDecimal shippingFee = BigDecimal.valueOf(30000); // phí ship cố định
         BigDecimal discountAmount = BigDecimal.ZERO;
         Coupon coupon = null;
 
@@ -197,6 +202,15 @@ public class OrderServiceImpl implements OrderService {
         });
     }
 
+    @Override
+    @Transactional
+    public void updateMyOrderStatus(String email, Long orderId, OrderDto.UpdateStatusRequest request) {
+        if (request.getStatus() != Order.OrderStatus.CANCELLED) {
+            throw new AppException(ErrorCode.FORBIDDEN);
+        }
+        cancelOrder(email, orderId);
+    }
+
     // ========================
     // ADMIN: Lấy tất cả đơn hàng
     // ========================
@@ -226,6 +240,8 @@ public class OrderServiceImpl implements OrderService {
     public OrderDto.Response updateStatus(Long orderId, OrderDto.UpdateStatusRequest request) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+        validateAdminStatusTransition(order.getStatus(), request.getStatus());
+
         order.setStatus(request.getStatus());
         orderRepository.save(order);
 
@@ -240,6 +256,23 @@ public class OrderServiceImpl implements OrderService {
         }
 
         return buildOrderResponse(order, payment);
+    }
+
+    private void validateAdminStatusTransition(Order.OrderStatus currentStatus, Order.OrderStatus nextStatus) {
+        if (currentStatus == nextStatus) {
+            return;
+        }
+
+        Set<Order.OrderStatus> allowedNextStatuses = switch (currentStatus) {
+            case PENDING -> EnumSet.of(Order.OrderStatus.CONFIRMED, Order.OrderStatus.CANCELLED);
+            case CONFIRMED -> EnumSet.of(Order.OrderStatus.SHIPPING, Order.OrderStatus.CANCELLED);
+            case SHIPPING -> EnumSet.of(Order.OrderStatus.DELIVERED);
+            case DELIVERED, CANCELLED -> EnumSet.noneOf(Order.OrderStatus.class);
+        };
+
+        if (!allowedNextStatuses.contains(nextStatus)) {
+            throw new AppException(ErrorCode.ORDER_INVALID_STATUS_TRANSITION);
+        }
     }
 
     // ========================

@@ -2,10 +2,30 @@
 POST /api/auth/register     Đăng ký
 POST /api/auth/login        Đăng nhập
 
+   Method    API                   Quyền
+  ━━━━━━━━  ━━━━━━━━━━━━━━━━━━━━  ━━━━━━━━
+   POST      /api/auth/register    Public
+  ────────  ────────────────────  ────────
+   POST      /api/auth/login       Public
+
 👤 User (cần đăng nhập)
 GET    /api/users/profile           Xem profile
 PUT    /api/users/profile           Cập nhật profile
 PUT    /api/users/change-password   Đổi mật khẩu
+
+   Method    API                           Quyền
+  ━━━━━━━━  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━  ━━━━━━━━━━━━━━━━━━
+   GET       /api/users/profile            Login, route cũ
+  ────────  ────────────────────────────  ──────────────────
+   PUT       /api/users/profile            Login, route cũ
+  ────────  ────────────────────────────  ──────────────────
+   PUT       /api/users/change-password    Login, route cũ
+  ────────  ────────────────────────────  ──────────────────
+   GET       /api/me                       Login, route mới
+  ────────  ────────────────────────────  ──────────────────
+   PUT       /api/me                       Login, route mới
+  ────────  ────────────────────────────  ──────────────────
+   PUT       /api/me/password              Login, route mới
 
 🏠 Address (cần đăng nhập)
 GET    /api/addresses           Danh sách địa chỉ
@@ -14,12 +34,55 @@ PUT    /api/addresses/{id}      Sửa địa chỉ
 DELETE /api/addresses/{id}      Xóa địa chỉ
 PATCH  /api/addresses/{id}/default  Đặt mặc định
 
+   Method    API                               Quyền
+  ━━━━━━━━  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  ━━━━━━━━━━━━━━━━━━
+   GET       /api/addresses                    Login, route cũ
+  ────────  ────────────────────────────────  ──────────────────
+   POST      /api/addresses                    Login, route cũ
+  ────────  ────────────────────────────────  ──────────────────
+   PUT       /api/addresses/{id}               Login, route cũ
+  ────────  ────────────────────────────────  ──────────────────
+   DELETE    /api/addresses/{id}               Login, route cũ
+  ────────  ────────────────────────────────  ──────────────────
+   PATCH     /api/addresses/{id}/default       Login, route cũ
+  ────────  ────────────────────────────────  ──────────────────
+   GET       /api/me/addresses                 Login, route mới
+  ────────  ────────────────────────────────  ──────────────────
+   POST      /api/me/addresses                 Login, route mới
+  ────────  ────────────────────────────────  ──────────────────
+   PUT       /api/me/addresses/{id}            Login, route mới
+  ────────  ────────────────────────────────  ──────────────────
+   DELETE    /api/me/addresses/{id}            Login, route mới
+  ────────  ────────────────────────────────  ──────────────────
+   PATCH     /api/me/addresses/{id}/default    Login, route mới
+
 🗂️ Category (GET public, POST/PUT/DELETE admin)
 GET    /api/categories          Danh sách danh mục
 GET    /api/categories/{id}     Chi tiết danh mục
 POST   /api/categories          Tạo danh mục
 PUT    /api/categories/{id}     Sửa danh mục
 DELETE /api/categories/{id}     Xóa danh mục
+
+   Method    API                           Quyền
+  ━━━━━━━━  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━  ━━━━━━━━━━━━━━━━━━
+   GET       /api/categories               Public
+  ────────  ────────────────────────────  ──────────────────
+   GET       /api/categories/{id}          Public
+  ────────  ────────────────────────────  ──────────────────
+   POST      /api/categories               Admin, route cũ
+  ────────  ────────────────────────────  ──────────────────
+   PUT       /api/categories/{id}          Admin, route cũ
+  ────────  ────────────────────────────  ──────────────────
+   DELETE    /api/categories/{id}          Admin, route cũ
+  ────────  ────────────────────────────  ──────────────────
+   GET       /api/admin/categories/{id}    Admin, route mới
+  ────────  ────────────────────────────  ──────────────────
+   POST      /api/admin/categories         Admin, route mới
+  ────────  ────────────────────────────  ──────────────────
+   PUT       /api/admin/categories/{id}    Admin, route mới
+  ────────  ────────────────────────────  ──────────────────
+   DELETE    /api/admin/categories/{id}    Admin, route mới
+
 
 👕 Product (GET public, thêm/sửa/xóa admin)
 GET    /api/products                        Danh sách + filter
@@ -32,12 +95,59 @@ POST   /api/products/{id}/variants          Thêm variant
 PUT    /api/products/variants/{id}          Sửa variant
 DELETE /api/products/variants/{id}          Xóa variant
 
+   Method    API                                         Quyền
+  ━━━━━━━━  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  ━━━━━━━━━━━━━━━━━━
+   GET       /api/products                               Public
+  ────────  ──────────────────────────────────────────  ──────────────────
+   GET       /api/products/{slug}                        Public
+  ────────  ──────────────────────────────────────────  ──────────────────
+   GET       /api/products/id/{id}                       Admin, route cũ
+  ────────  ──────────────────────────────────────────  ──────────────────
+   POST      /api/products                               Admin, route cũ
+  ────────  ──────────────────────────────────────────  ──────────────────
+   PUT       /api/products/{id}                          Admin, route cũ
+  ────────  ──────────────────────────────────────────  ──────────────────
+   DELETE    /api/products/{id}                          Admin, route cũ
+  ────────  ──────────────────────────────────────────  ──────────────────
+   POST      /api/products/{productId}/variants          Admin, route cũ
+  ────────  ──────────────────────────────────────────  ──────────────────
+   PUT       /api/products/variants/{variantId}          Admin, route cũ
+  ────────  ──────────────────────────────────────────  ──────────────────
+   DELETE    /api/products/variants/{variantId}          Admin, route cũ
+  ────────  ──────────────────────────────────────────  ──────────────────
+   GET       /api/admin/products/{id}                    Admin, route mới
+  ────────  ──────────────────────────────────────────  ──────────────────
+   POST      /api/admin/products                         Admin, route mới
+  ────────  ──────────────────────────────────────────  ──────────────────
+   PUT       /api/admin/products/{id}                    Admin, route mới
+  ────────  ──────────────────────────────────────────  ──────────────────
+   DELETE    /api/admin/products/{id}                    Admin, route mới
+  ────────  ──────────────────────────────────────────  ──────────────────
+   POST      /api/admin/products/{productId}/variants    Admin, route mới
+  ────────  ──────────────────────────────────────────  ──────────────────
+   PUT       /api/admin/products/variants/{variantId}    Admin, route mới
+  ────────  ──────────────────────────────────────────  ──────────────────
+   DELETE    /api/admin/products/variants/{variantId}    Admin, route mới
+
 🛒 Cart (cần đăng nhập)
 GET    /api/cart        Xem giỏ hàng
 POST   /api/cart        Thêm vào giỏ
 PUT    /api/cart/{id}   Cập nhật số lượng
 DELETE /api/cart/{id}   Xóa 1 sản phẩm
 DELETE /api/cart        Xóa cả giỏ
+
+   Method    API                       Quyền
+  ━━━━━━━━  ━━━━━━━━━━━━━━━━━━━━━━━━  ━━━━━━━━━━━━━━━━
+   GET       /api/cart                 Customer/Admin
+  ────────  ────────────────────────  ────────────────
+   POST      /api/cart                 Customer/Admin
+  ────────  ────────────────────────  ────────────────
+   PUT       /api/cart/{cartItemId}    Customer/Admin
+  ────────  ────────────────────────  ────────────────
+   DELETE    /api/cart/{cartItemId}    Customer/Admin
+  ────────  ────────────────────────  ────────────────
+   DELETE    /api/cart                 Customer/Admin
+
 
 📦 Order (cần đăng nhập)
 POST   /api/orders              Đặt hàng
@@ -47,13 +157,61 @@ PATCH  /api/orders/{id}/cancel  Hủy đơn
 GET    /api/orders/admin            (admin) Tất cả đơn
 PATCH  /api/orders/admin/{id}/status (admin) Cập nhật trạng thái
 
+   Method    API                              Quyền
+  ━━━━━━━━  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   POST      /api/orders                      Customer/Admin
+  ────────  ───────────────────────────────  ───────────────────────────────
+   GET       /api/orders                      Customer/Admin, route cũ
+  ────────  ───────────────────────────────  ───────────────────────────────
+   GET       /api/orders/{id}                 Customer/Admin, route cũ
+  ────────  ───────────────────────────────  ───────────────────────────────
+   PATCH     /api/orders/{id}/cancel          Customer/Admin, route cũ
+  ────────  ───────────────────────────────  ───────────────────────────────
+   GET       /api/orders/admin                Admin, route cũ
+  ────────  ───────────────────────────────  ───────────────────────────────
+   PATCH     /api/orders/admin/{id}/status    Admin, route cũ
+  ────────  ───────────────────────────────  ───────────────────────────────
+   GET       /api/me/orders                   Login, route mới
+  ────────  ───────────────────────────────  ───────────────────────────────
+   GET       /api/me/orders/{id}              Login, route mới
+  ────────  ───────────────────────────────  ───────────────────────────────
+   PATCH     /api/me/orders/{id}/status       Login, route mới, chỉ hủy đơn
+  ────────  ───────────────────────────────  ───────────────────────────────
+   GET       /api/admin/orders                Admin, route mới
+  ────────  ───────────────────────────────  ───────────────────────────────
+   PATCH     /api/admin/orders/{id}/status    Admin, route mới
+
 ⭐ Review
 GET    /api/reviews/product/{id}          Danh sách đánh giá
 GET    /api/reviews/product/{id}/summary  Tổng hợp rating
 POST   /api/reviews                       Viết đánh giá
+
+   Method    API                                         Quyền
+  ━━━━━━━━  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  ━━━━━━━━
+   GET       /api/reviews/product/{productId}            Public
+  ────────  ──────────────────────────────────────────  ────────
+   GET       /api/reviews/product/{productId}/summary    Public
+  ────────  ──────────────────────────────────────────  ────────
+   POST      /api/reviews
 
 🎟️ Coupon
 POST   /api/coupons/apply    Áp dụng mã giảm giá
 POST   /api/coupons          (admin) Tạo mã
 PUT    /api/coupons/{id}     (admin) Sửa mã
 DELETE /api/coupons/{id}     (admin) Xóa mã
+
+   Method    API                        Quyền
+  ━━━━━━━━  ━━━━━━━━━━━━━━━━━━━━━━━━━  ━━━━━━━━━━━━━━━━━━
+   POST      /api/coupons/apply         Public/Login
+  ────────  ─────────────────────────  ──────────────────
+   POST      /api/coupons               Admin, route cũ
+  ────────  ─────────────────────────  ──────────────────
+   PUT       /api/coupons/{id}          Admin, route cũ
+  ────────  ─────────────────────────  ──────────────────
+   DELETE    /api/coupons/{id}          Admin, route cũ
+  ────────  ─────────────────────────  ──────────────────
+   POST      /api/admin/coupons         Admin, route mới
+  ────────  ─────────────────────────  ──────────────────
+   PUT       /api/admin/coupons/{id}    Admin, route mới
+  ────────  ─────────────────────────  ──────────────────
+   DELETE    /api/admin/coupons/{id}    Admin, route mới
