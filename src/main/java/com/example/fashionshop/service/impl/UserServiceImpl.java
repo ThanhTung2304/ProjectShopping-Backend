@@ -8,6 +8,8 @@ import com.example.fashionshop.mapper.UserMapper;
 import com.example.fashionshop.repository.UserRepository;
 import com.example.fashionshop.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -67,11 +69,59 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
     }
 
+    @Override
+    public Page<UserDto.Response> getAllUsers(Pageable pageable) {
+        return userRepository.findAll(pageable)
+                .map(userMapper::toResponse);
+    }
+
+    @Override
+    public UserDto.Response getUserById(Long id) {
+        return userMapper.toResponse(findById(id));
+    }
+
+    @Override
+    @Transactional
+    public UserDto.Response updateUserStatus(Long id, UserDto.UpdateStatusRequest request) {
+        User user = findById(id);
+        user.setIsActive(request.getIsActive());
+        return userMapper.toResponse(userRepository.save(user));
+    }
+
+    @Override
+    @Transactional
+    public UserDto.Response updateUserRole(Long id, UserDto.UpdateRoleRequest request) {
+        User user = findById(id);
+        user.setRole(parseRole(request.getRole()));
+        return userMapper.toResponse(userRepository.save(user));
+    }
+
+    @Override
+    @Transactional
+    public void deleteUser(Long id) {
+        User user = findById(id);
+        user.setIsActive(false);
+        userRepository.save(user);
+    }
+
     // ========================
     // Helper
     // ========================
     private User findByEmail(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    private User findById(Long id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    private User.Role parseRole(String role) {
+        try {
+            return User.Role.valueOf(role.trim().toUpperCase());
+        } catch (IllegalArgumentException | NullPointerException ex) {
+            throw new AppException(ErrorCode.VALIDATION_ERROR);
+        }
     }
 }

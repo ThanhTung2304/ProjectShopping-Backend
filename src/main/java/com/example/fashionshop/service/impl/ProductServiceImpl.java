@@ -1,3 +1,4 @@
+
 package com.example.fashionshop.service.impl;
 
 import com.example.fashionshop.dto.product.ProductDto;
@@ -32,14 +33,12 @@ public class ProductServiceImpl implements ProductService {
     private final VariantMapper variantMapper;
     private final ProductRepositoryCustom productRepositoryCustom;
 
-    // ========================
-    // Danh sách sản phẩm (có filter + phân trang)
-    // ========================
     @Override
     @Transactional(readOnly = true)
     public Page<ProductDto.Summary> getProducts(String keyword, Long categoryId,
                                                 BigDecimal minPrice, BigDecimal maxPrice,
-                                                String size, String color, Pageable pageable) {
+                                                String size, String color,
+                                                Pageable pageable) {
 
         return productRepositoryCustom
                 .searchProducts(keyword, categoryId, minPrice, maxPrice, size, color, pageable)
@@ -47,74 +46,68 @@ public class ProductServiceImpl implements ProductService {
 
                     ProductDto.Summary summary = productMapper.toSummary(product);
 
-                    var variants = product.getVariants();
+                    BigDecimal min = BigDecimal.ZERO;
+                    BigDecimal max = BigDecimal.ZERO;
 
-                    if (variants != null && !variants.isEmpty()) {
-
-                        BigDecimal min = variants.stream()
-                                .map(v -> v.getSalePrice() != null
-                                        ? v.getSalePrice()
-                                        : v.getPrice())
+                    if (product.getVariants() != null && !product.getVariants().isEmpty()) {
+                        min = product.getVariants().stream()
+                                .map(v -> v.getSalePrice() != null ? v.getSalePrice() : v.getPrice())
                                 .min(BigDecimal::compareTo)
                                 .orElse(BigDecimal.ZERO);
 
-                        BigDecimal max = variants.stream()
+                        max = product.getVariants().stream()
                                 .map(ProductVariant::getPrice)
                                 .max(BigDecimal::compareTo)
                                 .orElse(BigDecimal.ZERO);
-
-                        return ProductDto.Summary.builder()
-                                .id(summary.getId())
-                                .name(summary.getName())
-                                .slug(summary.getSlug())
-                                .categoryName(summary.getCategoryName())
-                                .primaryImageUrl(
-                                        product.getImages().stream()
-                                                .filter(ProductImage::getIsPrimary)
-                                                .map(ProductImage::getImageUrl)
-                                                .findFirst()
-                                                .orElse(null)
-                                )
-                                .minPrice(min)
-                                .maxPrice(max)
-                                .averageRating(
-                                        reviewRepository.findAverageRatingByProductId(product.getId())
-                                )
-                                .totalReviews(
-                                        (int) reviewRepository.countByProductId(product.getId())
-                                )
-                                .build();
                     }
 
-                    return summary;
+                    String primaryImageUrl = null;
+                    if (product.getImages() != null && !product.getImages().isEmpty()) {
+                        primaryImageUrl = product.getImages().stream()
+                                .filter(ProductImage::getIsPrimary)
+                                .map(ProductImage::getImageUrl)
+                                .findFirst()
+                                .orElse(null);
+                    }
+
+                    return ProductDto.Summary.builder()
+                            .id(summary.getId())
+                            .name(summary.getName())
+                            .slug(summary.getSlug())
+                            .categoryName(summary.getCategoryName())
+                            .primaryImageUrl(primaryImageUrl)
+                            .minPrice(min)
+                            .maxPrice(max)
+                            .averageRating(reviewRepository.findAverageRatingByProductId(product.getId()))
+                            .totalReviews((int) reviewRepository.countByProductId(product.getId()))
+                            .build();
                 });
     }
 
-    // ========================
-    // Chi tiết sản phẩm theo slug
-    // ========================
     @Override
+    @Transactional(readOnly = true)
     public ProductDto.Response getProductBySlug(String slug) {
         Product product = productRepository.findBySlug(slug)
-                .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND,
-                        "Không tìm thấy sản phẩm: " + slug));
+                .orElseThrow(() -> new AppException(
+                        ErrorCode.PRODUCT_NOT_FOUND,
+                        "Không tìm thấy sản phẩm: " + slug
+                ));
+
         return buildProductResponse(product);
     }
 
-    // ========================
-    // Chi tiết sản phẩm theo id
-    // ========================
     @Override
+    @Transactional(readOnly = true)
     public ProductDto.Response getProductById(Long id) {
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND,
-                        "Không tìm thấy sản phẩm với id: " + id));
+                .orElseThrow(() -> new AppException(
+                        ErrorCode.PRODUCT_NOT_FOUND,
+                        "Không tìm thấy sản phẩm với id: " + id
+                ));
+
         return buildProductResponse(product);
     }
 
-    // ========================
-    // Tạo sản phẩm mới (ADMIN)
-    // ========================
     @Override
     @Transactional
     public ProductDto.Response createProduct(ProductDto.Request request) {
@@ -136,16 +129,12 @@ public class ProductServiceImpl implements ProductService {
         return buildProductResponse(productRepository.save(product));
     }
 
-    // ========================
-    // Cập nhật sản phẩm (ADMIN)
-    // ========================
     @Override
     @Transactional
     public ProductDto.Response updateProduct(Long id, ProductDto.Request request) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
 
-        // Kiểm tra slug trùng (trừ chính nó)
         if (!product.getSlug().equals(request.getSlug())
                 && productRepository.existsBySlug(request.getSlug())) {
             throw new AppException(ErrorCode.PRODUCT_SLUG_EXISTS);
@@ -158,27 +147,24 @@ public class ProductServiceImpl implements ProductService {
         product.setSlug(request.getSlug());
         product.setDescription(request.getDescription());
         product.setCategory(category);
-        if (request.getIsActive() != null) product.setIsActive(request.getIsActive());
+
+        if (request.getIsActive() != null) {
+            product.setIsActive(request.getIsActive());
+        }
 
         return buildProductResponse(productRepository.save(product));
     }
 
-    // ========================
-    // Xóa sản phẩm (ADMIN)
-    // ========================
     @Override
     @Transactional
     public void deleteProduct(Long id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
-        // Soft delete
+
         product.setIsActive(false);
         productRepository.save(product);
     }
 
-    // ========================
-    // Thêm variant cho sản phẩm (ADMIN)
-    // ========================
     @Override
     @Transactional
     public VariantDto.Response addVariant(Long productId, VariantDto.Request request) {
@@ -203,16 +189,12 @@ public class ProductServiceImpl implements ProductService {
         return variantMapper.toResponse(variantRepository.save(variant));
     }
 
-    // ========================
-    // Cập nhật variant (ADMIN)
-    // ========================
     @Override
     @Transactional
     public VariantDto.Response updateVariant(Long variantId, VariantDto.Request request) {
         ProductVariant variant = variantRepository.findById(variantId)
                 .orElseThrow(() -> new AppException(ErrorCode.VARIANT_NOT_FOUND));
 
-        // Kiểm tra SKU trùng (trừ chính nó)
         if (!variant.getSku().equals(request.getSku())
                 && variantRepository.existsBySku(request.getSku())) {
             throw new AppException(ErrorCode.VARIANT_SKU_EXISTS);
@@ -228,23 +210,19 @@ public class ProductServiceImpl implements ProductService {
         return variantMapper.toResponse(variantRepository.save(variant));
     }
 
-    // ========================
-    // Xóa variant (ADMIN)
-    // ========================
     @Override
     @Transactional
     public void deleteVariant(Long variantId) {
         ProductVariant variant = variantRepository.findById(variantId)
                 .orElseThrow(() -> new AppException(ErrorCode.VARIANT_NOT_FOUND));
+
         variant.setIsActive(false);
         variantRepository.save(variant);
     }
 
-    // ========================
-    // Helper: Build ProductResponse đầy đủ
-    // ========================
     private ProductDto.Response buildProductResponse(Product product) {
         ProductDto.Response response = productMapper.toResponse(product);
+
         Double avgRating = reviewRepository.findAverageRatingByProductId(product.getId());
         int totalReviews = (int) reviewRepository.countByProductId(product.getId());
 
@@ -258,7 +236,7 @@ public class ProductServiceImpl implements ProductService {
                 .createdAt(response.getCreatedAt())
                 .variants(response.getVariants())
                 .images(response.getImages())
-                .averageRating(avgRating)
+                .averageRating(avgRating != null ? avgRating : 0.0)
                 .totalReviews(totalReviews)
                 .build();
     }

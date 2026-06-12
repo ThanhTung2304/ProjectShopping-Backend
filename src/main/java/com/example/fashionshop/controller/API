@@ -215,3 +215,118 @@ DELETE /api/coupons/{id}     (admin) Xóa mã
    PUT       /api/admin/coupons/{id}    Admin, route mới
   ────────  ─────────────────────────  ──────────────────
    DELETE    /api/admin/coupons/{id}    Admin, route mới
+
+
+     Quản lý tài khoản:
+
+     GET    /api/admin/users
+     GET    /api/admin/users/{id}
+     PATCH  /api/admin/users/{id}/status
+     PATCH  /api/admin/users/{id}/role
+     DELETE /api/admin/users/{id}
+
+
+
+  Public
+
+  POST   /api/auth/register
+  POST   /api/auth/login
+
+  GET    /api/products
+  GET    /api/products/{slug}
+  GET    /api/products/id/{id}
+
+  GET    /api/categories
+  GET    /api/categories/{id}
+
+  GET    /api/reviews/product/{productId}
+  GET    /api/reviews/product/{productId}/summary
+
+  POST   /api/coupons/apply
+
+  User/Customer hoặc Admin đã đăng nhập
+
+  GET    /api/users/profile
+  PUT    /api/users/profile
+  PUT    /api/users/change-password
+
+  GET    /api/me
+  PUT    /api/me
+  PUT    /api/me/password
+  GET    /api/me/addresses
+  POST   /api/me/addresses
+  PUT    /api/me/addresses/{id}
+  DELETE /api/me/addresses/{id}
+  PATCH  /api/me/addresses/{id}/default
+  GET    /api/me/orders
+  GET    /api/me/orders/{id}
+  PATCH  /api/me/orders/{id}/status
+
+  GET    /api/addresses
+  POST   /api/addresses
+  PUT    /api/addresses/{id}
+  DELETE /api/addresses/{id}
+  PATCH  /api/addresses/{id}/default
+
+  GET    /api/cart
+  POST   /api/cart
+  PUT    /api/cart/{id}
+  DELETE /api/cart/{id}
+  DELETE /api/cart
+
+  POST   /api/orders
+  GET    /api/orders
+  GET    /api/orders/{id}
+  PATCH  /api/orders/{id}/cancel
+
+  POST   /api/reviews
+
+  Admin
+
+  GET    /api/admin/users
+  GET    /api/admin/users/{id}
+  PATCH  /api/admin/users/{id}/status
+  PATCH  /api/admin/users/{id}/role
+  DELETE /api/admin/users/{id}
+
+  GET    /api/admin/products/{id}
+  POST   /api/admin/products
+  PUT    /api/admin/products/{id}
+  DELETE /api/admin/products/{id}
+  POST   /api/admin/products/{productId}/variants
+  PUT    /api/admin/products/variants/{variantId}
+  DELETE /api/admin/products/variants/{variantId}
+
+  GET    /api/admin/categories/{id}
+  POST   /api/admin/categories
+  PUT    /api/admin/categories/{id}
+  DELETE /api/admin/categories/{id}
+
+  POST   /api/admin/coupons
+  PUT    /api/admin/coupons/{id}
+  DELETE /api/admin/coupons/{id}
+
+  GET    /api/admin/orders
+  PATCH  /api/admin/orders/{id}/status
+
+  Admin trùng route cũ vẫn có trong controller
+
+  POST   /api/products
+  PUT    /api/products/{id}
+  DELETE /api/products/{id}
+  POST   /api/products/{productId}/variants
+  PUT    /api/products/variants/{variantId}
+  DELETE /api/products/variants/{variantId}
+
+  POST   /api/categories
+  PUT    /api/categories/{id}
+  DELETE /api/categories/{id}
+
+  POST   /api/coupons
+  PUT    /api/coupons/{id}
+  DELETE /api/coupons/{id}
+
+  GET    /api/orders/admin
+  PATCH  /api/orders/admin/{id}/status
+
+

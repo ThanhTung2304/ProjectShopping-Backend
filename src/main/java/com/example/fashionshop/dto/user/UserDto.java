@@ -1,6 +1,7 @@
 package com.example.fashionshop.dto.user;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 
@@ -52,5 +53,17 @@ public class UserDto {
         @NotBlank(message = "Mật khẩu mới không được để trống")
         @Size(min = 6, message = "Mật khẩu mới tối thiểu 6 kí tự")
         private String newPassword;
+    }
+    
+    @Getter
+    public static class UpdateStatusRequest {
+        @NotNull(message = "Trang thai tai khoan khong duoc de trong")
+        private Boolean isActive;
+    }
+
+    @Getter
+    public static class UpdateRoleRequest {
+        @NotBlank(message = "Quyen tai khoan khong duoc de trong")
+        private String role;
     }
 }

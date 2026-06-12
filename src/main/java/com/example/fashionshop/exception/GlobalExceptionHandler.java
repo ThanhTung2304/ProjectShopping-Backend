@@ -1,11 +1,14 @@
 package com.example.fashionshop.exception;
 
+import com.example.fashionshop.dto.ApiResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -86,5 +89,18 @@ public class GlobalExceptionHandler {
                     ErrorCode.VALIDATION_ERROR.getMessage(),
                     errors);
         }
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiResponse<?>> handleMethodNotSupported(
+            HttpServletRequest request,
+            HttpRequestMethodNotSupportedException ex
+    ) {
+
+        log.error("URL: {}", request.getRequestURI());
+        log.error("Method: {}", request.getMethod());
+
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
+                .body(ApiResponse.error(ex.getMessage()));
     }
 }
