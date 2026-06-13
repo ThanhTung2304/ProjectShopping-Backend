@@ -16,6 +16,7 @@ public enum ErrorCode {
 
     // ===== USER =====
     USER_NOT_FOUND              (HttpStatus.NOT_FOUND,           "Không tìm thấy người dùng"),
+    USER_CANNOT_HARD_DELETE     (HttpStatus.BAD_REQUEST,         "Khong the xoa cung tai khoan da co don hang hoac danh gia"),
 
     // ===== ADDRESS =====
     ADDRESS_NOT_FOUND           (HttpStatus.NOT_FOUND,           "Không tìm thấy địa chỉ"),
