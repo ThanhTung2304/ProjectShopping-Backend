@@ -15,6 +15,8 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     // Kiểm tra user đã review sản phẩm trong đơn hàng này chưa
     boolean existsByUserIdAndProductIdAndOrderId(Long userId,Long productId, Long orderId);
 
+    boolean existsByUserId(Long userId);
+
     // Tính rating trung bình của sản phẩm
     @Query("SELECT AVG(r.rating) FROM Review r WHERE r.product.id = :productId")
     Double findAverageRatingByProductId(Long productId);

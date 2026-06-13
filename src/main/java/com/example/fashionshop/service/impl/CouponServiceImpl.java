@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -61,6 +62,14 @@ public class CouponServiceImpl implements CouponService {
     @Transactional
     public void incrementUsage(Long couponId) {
         couponRepository.incrementUsedCount(couponId);
+    }
+
+    @Override
+    public List<CouponDto.Response> getAllCoupons() {
+        return couponRepository.findAll()
+                .stream()
+                .map(couponMapper::toResponse)
+                .toList();
     }
 
     // ========================

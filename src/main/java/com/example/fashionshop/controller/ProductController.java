@@ -86,7 +86,7 @@ public class ProductController {
     // ===== VARIANT =====
 
     // POST /api/products/{productId}/variants — ADMIN only
-    @PostMapping("/{productId}/variants")
+    @PostMapping("/id/{productId}/variants")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<VariantDto.Response>> addVariant(
             @PathVariable Long productId,

@@ -4,6 +4,7 @@ import com.example.fashionshop.dto.UpdateStatusRequest.coupon.CouponDto;
 import com.example.fashionshop.entity.Coupon;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 public interface CouponService {
     CouponDto.ApplyResponse applyCoupon(String code, BigDecimal orderAmount);
@@ -11,6 +12,7 @@ public interface CouponService {
     void incrementUsage(Long couponId);
 
     // ADMIN
+    List<CouponDto.Response> getAllCoupons();
     CouponDto.Response createCoupon(CouponDto.Request request);
     CouponDto.Response updateCoupon(Long id, CouponDto.Request request);
     void deleteCoupon(Long id);

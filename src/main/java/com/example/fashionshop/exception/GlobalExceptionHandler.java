@@ -54,6 +54,8 @@ public class GlobalExceptionHandler {
     // ===== Bắt lỗi không có quyền =====
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDeniedException(AccessDeniedException ex) {
+        log.error("AccessDenied: {}", ex.getMessage(), ex);
+
         return ResponseEntity
                 .status(HttpStatus.FORBIDDEN)
                 .body(ErrorResponse.of(ErrorCode.FORBIDDEN.name(), ErrorCode.FORBIDDEN.getMessage()));

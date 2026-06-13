@@ -10,7 +10,9 @@ public interface UserService {
     void changePassword(String email, UserDto.ChangePasswordRequest request);
     Page<UserDto.Response> getAllUsers(Pageable pageable);
     UserDto.Response getUserById(Long id);
+    UserDto.Response updateUser(Long id, UserDto.AdminUpdateRequest request);
     UserDto.Response updateUserStatus(Long id, UserDto.UpdateStatusRequest request);
     UserDto.Response updateUserRole(Long id, UserDto.UpdateRoleRequest request);
     void deleteUser(Long id);
+    void hardDeleteUser(Long id);
 }

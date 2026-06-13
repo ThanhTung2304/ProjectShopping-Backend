@@ -221,9 +221,11 @@ DELETE /api/coupons/{id}     (admin) Xóa mã
 
      GET    /api/admin/users
      GET    /api/admin/users/{id}
+     PUT    /api/admin/users/{id}
      PATCH  /api/admin/users/{id}/status
      PATCH  /api/admin/users/{id}/role
      DELETE /api/admin/users/{id}
+     DELETE /api/admin/users/{id}/hard
 
 
 
@@ -285,9 +287,11 @@ DELETE /api/coupons/{id}     (admin) Xóa mã
 
   GET    /api/admin/users
   GET    /api/admin/users/{id}
+  PUT    /api/admin/users/{id}
   PATCH  /api/admin/users/{id}/status
   PATCH  /api/admin/users/{id}/role
   DELETE /api/admin/users/{id}
+  DELETE /api/admin/users/{id}/hard
 
   GET    /api/admin/products/{id}
   POST   /api/admin/products
@@ -328,5 +332,3 @@ DELETE /api/coupons/{id}     (admin) Xóa mã
 
   GET    /api/orders/admin
   PATCH  /api/orders/admin/{id}/status
-
-

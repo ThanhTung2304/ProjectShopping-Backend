@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -37,6 +38,14 @@ public class AdminUserController {
         return ResponseEntity.ok(ApiResponse.success(userService.getUserById(id)));
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<ApiResponse<UserDto.Response>> updateUser(
+            @PathVariable Long id,
+            @Valid @RequestBody UserDto.AdminUpdateRequest request) {
+        return ResponseEntity.ok(ApiResponse.success("Cap nhat tai khoan thanh cong",
+                userService.updateUser(id, request)));
+    }
+
     @PatchMapping("/{id}/status")
     public ResponseEntity<ApiResponse<UserDto.Response>> updateUserStatus(
             @PathVariable Long id,
@@ -57,5 +66,11 @@ public class AdminUserController {
     public ResponseEntity<ApiResponse<Void>> deleteUser(@PathVariable Long id) {
         userService.deleteUser(id);
         return ResponseEntity.ok(ApiResponse.ok("Vo hieu hoa tai khoan thanh cong"));
+    }
+
+    @DeleteMapping("/{id}/hard")
+    public ResponseEntity<ApiResponse<Void>> hardDeleteUser(@PathVariable Long id) {
+        userService.hardDeleteUser(id);
+        return ResponseEntity.ok(ApiResponse.ok("Xoa tai khoan vinh vien thanh cong"));
     }
 }

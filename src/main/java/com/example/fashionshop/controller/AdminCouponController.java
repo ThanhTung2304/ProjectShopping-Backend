@@ -10,6 +10,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/admin/coupons")
 @RequiredArgsConstructor
@@ -17,6 +19,11 @@ import org.springframework.web.bind.annotation.*;
 public class AdminCouponController {
 
     private final CouponService couponService;
+
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<CouponDto.Response>>> getAllCoupons() {
+        return ResponseEntity.ok(ApiResponse.success(couponService.getAllCoupons()));
+    }
 
     @PostMapping
     public ResponseEntity<ApiResponse<CouponDto.Response>> createCoupon(

@@ -1,6 +1,7 @@
 package com.example.fashionshop.dto.user;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.*;
@@ -65,5 +66,19 @@ public class UserDto {
     public static class UpdateRoleRequest {
         @NotBlank(message = "Quyen tai khoan khong duoc de trong")
         private String role;
+    }
+
+    @Getter
+    public static class AdminUpdateRequest {
+        private String fullName;
+
+        @Email(message = "Email khong hop le")
+        private String email;
+
+        private String phone;
+
+        private String role;
+
+        private Boolean isActive;
     }
 }
