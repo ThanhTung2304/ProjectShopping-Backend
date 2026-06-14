@@ -14,5 +14,5 @@ public interface ProductImageMapper {
     // MapStruct tự map vì tên field giống nhau
     com.example.fashionshop.dto.product.ImageDto.Response toResponse(ProductImage image);
 
-    List<com.example.fashionshop.dto.product.VariantDto.Response> toResponseList(List<ProductImage> images);
+    List<ImageDto.Response> toResponseList(List<ProductImage> images);
 }
