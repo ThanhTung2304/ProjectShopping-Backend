@@ -15,6 +15,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/products")
@@ -24,8 +25,6 @@ public class ProductController {
     private final ProductService productService;
 
     // GET /api/products
-    // Danh sách sản phẩm có filter + phân trang
-    // Ví dụ: GET /api/products?keyword=áo&categoryId=1&minPrice=100000&size=M&page=0&size=12
     @GetMapping
     public ResponseEntity<ApiResponse<Page<ProductDto.Summary>>> getProducts(
             @RequestParam(required = false) String keyword,
@@ -40,7 +39,6 @@ public class ProductController {
     }
 
     // GET /api/products/{slug}
-    // Chi tiết sản phẩm theo slug (dùng cho frontend)
     @GetMapping("/{slug}")
     public ResponseEntity<ApiResponse<ProductDto.Response>> getProductBySlug(
             @PathVariable String slug) {
@@ -48,7 +46,6 @@ public class ProductController {
     }
 
     // GET /api/products/id/{id}
-    // Chi tiết sản phẩm theo id (dùng cho admin)
     @GetMapping("/id/{id}")
     public ResponseEntity<ApiResponse<ProductDto.Response>> getProductById(
             @PathVariable Long id) {
@@ -85,7 +82,15 @@ public class ProductController {
 
     // ===== VARIANT =====
 
-    // POST /api/products/{productId}/variants — ADMIN only
+    // GET /api/products/{productId}/variants — public
+    @GetMapping("/{productId}/variants")
+    public ResponseEntity<ApiResponse<List<VariantDto.Response>>> getVariantsByProduct(
+            @PathVariable Long productId) {
+        return ResponseEntity.ok(ApiResponse.success(
+                productService.getVariantsByProductId(productId)));
+    }
+
+    // POST /api/products/id/{productId}/variants — ADMIN only
     @PostMapping("/id/{productId}/variants")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<VariantDto.Response>> addVariant(

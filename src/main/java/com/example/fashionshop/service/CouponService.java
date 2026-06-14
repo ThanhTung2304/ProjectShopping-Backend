@@ -11,6 +11,8 @@ public interface CouponService {
     Coupon validateCoupon(String code, BigDecimal orderAmount); // dùng nội bộ trong OrderService
     void incrementUsage(Long couponId);
 
+    List<CouponDto.Response> getActiveCoupons();
+
     // ADMIN
     List<CouponDto.Response> getAllCoupons();
     CouponDto.Response createCoupon(CouponDto.Request request);
