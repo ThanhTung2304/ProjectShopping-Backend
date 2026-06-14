@@ -1,6 +1,7 @@
 
 package com.example.fashionshop.service.impl;
 
+import com.example.fashionshop.dto.product.ImageDto;
 import com.example.fashionshop.dto.product.ProductDto;
 import com.example.fashionshop.dto.product.VariantDto;
 import com.example.fashionshop.entity.Category;
@@ -9,17 +10,21 @@ import com.example.fashionshop.entity.ProductImage;
 import com.example.fashionshop.entity.ProductVariant;
 import com.example.fashionshop.exception.AppException;
 import com.example.fashionshop.exception.ErrorCode;
+import com.example.fashionshop.mapper.ProductImageMapper;
 import com.example.fashionshop.mapper.ProductMapper;
 import com.example.fashionshop.mapper.VariantMapper;
 import com.example.fashionshop.repository.*;
+import com.example.fashionshop.service.FileStorageService;
 import com.example.fashionshop.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -29,9 +34,12 @@ public class ProductServiceImpl implements ProductService {
     private final ProductVariantRepository variantRepository;
     private final CategoryRepository categoryRepository;
     private final ReviewRepository reviewRepository;
+    private final ProductImageRepository productImageRepository;
     private final ProductMapper productMapper;
+    private final ProductImageMapper productImageMapper;
     private final VariantMapper variantMapper;
     private final ProductRepositoryCustom productRepositoryCustom;
+    private final FileStorageService fileStorageService;
 
     @Override
     @Transactional(readOnly = true)
@@ -166,6 +174,76 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<ImageDto.Response> getProductImages(Long productId) {
+        if (!productRepository.existsById(productId)) {
+            throw new AppException(ErrorCode.PRODUCT_NOT_FOUND);
+        }
+
+        return productImageMapper.toResponseList(
+                productImageRepository.findByProductIdOrderBySortOrderAsc(productId));
+    }
+
+    @Override
+    @Transactional
+    public ImageDto.Response addProductImage(Long productId, MultipartFile file, Boolean isPrimary, Integer sortOrder) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
+
+        boolean shouldBePrimary = Boolean.TRUE.equals(isPrimary)
+                || productImageRepository.findByProductIdAndIsPrimaryTrue(productId).isEmpty();
+
+        if (shouldBePrimary) {
+            productImageRepository.clearPrimaryByProductId(productId);
+        }
+
+        String imageUrl = fileStorageService.storeProductImage(file);
+        ProductImage image = ProductImage.builder()
+                .product(product)
+                .imageUrl(imageUrl)
+                .isPrimary(shouldBePrimary)
+                .sortOrder(sortOrder != null ? sortOrder : 0)
+                .build();
+
+        return productImageMapper.toResponse(productImageRepository.save(image));
+    }
+
+    @Override
+    @Transactional
+    public ImageDto.Response setPrimaryProductImage(Long productId, Long imageId) {
+        ProductImage image = productImageRepository.findByIdAndProductId(imageId, productId)
+                .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_IMAGE_NOT_FOUND));
+
+        productImageRepository.clearPrimaryByProductId(productId);
+        image.setIsPrimary(true);
+
+        return productImageMapper.toResponse(productImageRepository.save(image));
+    }
+
+    @Override
+    @Transactional
+    public void deleteProductImage(Long productId, Long imageId) {
+        ProductImage image = productImageRepository.findByIdAndProductId(imageId, productId)
+                .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_IMAGE_NOT_FOUND));
+
+        boolean wasPrimary = Boolean.TRUE.equals(image.getIsPrimary());
+        String imageUrl = image.getImageUrl();
+
+        productImageRepository.delete(image);
+        productImageRepository.flush();
+        fileStorageService.deleteByPublicUrl(imageUrl);
+
+        if (wasPrimary) {
+            productImageRepository.findByProductIdOrderBySortOrderAsc(productId).stream()
+                    .findFirst()
+                    .ifPresent(nextImage -> {
+                        nextImage.setIsPrimary(true);
+                        productImageRepository.save(nextImage);
+                    });
+        }
+    }
+
+    @Override
     @Transactional
     public VariantDto.Response addVariant(Long productId, VariantDto.Request request) {
         Product product = productRepository.findById(productId)
@@ -239,5 +317,17 @@ public class ProductServiceImpl implements ProductService {
                 .averageRating(avgRating != null ? avgRating : 0.0)
                 .totalReviews(totalReviews)
                 .build();
+    }
+
+    // ProductServiceImpl
+    @Override
+    @Transactional(readOnly = true)
+    public List<VariantDto.Response> getVariantsByProductId(Long productId) {
+        if (!productRepository.existsById(productId)) {
+            throw new AppException(ErrorCode.PRODUCT_NOT_FOUND);
+        }
+        return variantRepository.findByProductId(productId).stream()
+                .map(variantMapper::toResponse)
+                .toList();
     }
 }

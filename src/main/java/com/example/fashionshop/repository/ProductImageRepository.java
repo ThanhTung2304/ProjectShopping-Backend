@@ -16,6 +16,8 @@ public interface ProductImageRepository extends JpaRepository<ProductImage, Long
 
     Optional<ProductImage> findByProductIdAndIsPrimaryTrue(Long productId);
 
+    Optional<ProductImage> findByIdAndProductId(Long id, Long productId);
+
     // Bỏ primary tất cả ảnh của product trước khi set primary mới
     @Modifying
     @Query("UPDATE ProductImage pi SET pi.isPrimary = false WHERE pi.product.id = :productId")

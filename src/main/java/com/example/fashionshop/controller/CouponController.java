@@ -10,6 +10,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/coupons")
 @RequiredArgsConstructor
@@ -17,8 +19,15 @@ public class CouponController {
 
     private final CouponService couponService;
 
-    // POST /api/coupons/apply
-    // User nhập mã giảm giá → kiểm tra và tính số tiền giảm
+    // ===== PUBLIC =====
+
+    // GET /api/coupons/active — User xem danh sách coupon đang hoạt động
+    @GetMapping("/active")
+    public ResponseEntity<ApiResponse<List<CouponDto.Response>>> getActiveCoupons() {
+        return ResponseEntity.ok(ApiResponse.success(couponService.getActiveCoupons()));
+    }
+
+    // POST /api/coupons/apply — User nhập mã giảm giá
     @PostMapping("/apply")
     public ResponseEntity<ApiResponse<CouponDto.ApplyResponse>> applyCoupon(
             @Valid @RequestBody CouponDto.ApplyRequest request) {
@@ -28,7 +37,14 @@ public class CouponController {
 
     // ===== ADMIN =====
 
-    // POST /api/coupons — ADMIN only
+    // GET /api/coupons — ADMIN xem tất cả coupon
+    @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<List<CouponDto.Response>>> getAllCoupons() {
+        return ResponseEntity.ok(ApiResponse.success(couponService.getAllCoupons()));
+    }
+
+    // POST /api/coupons
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<CouponDto.Response>> createCoupon(
@@ -38,7 +54,7 @@ public class CouponController {
                         couponService.createCoupon(request)));
     }
 
-    // PUT /api/coupons/{id} — ADMIN only
+    // PUT /api/coupons/{id}
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<CouponDto.Response>> updateCoupon(
@@ -48,7 +64,7 @@ public class CouponController {
                 couponService.updateCoupon(id, request)));
     }
 
-    // DELETE /api/coupons/{id} — ADMIN only
+    // DELETE /api/coupons/{id}
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> deleteCoupon(@PathVariable Long id) {

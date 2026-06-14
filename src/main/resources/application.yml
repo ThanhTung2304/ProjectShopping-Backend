@@ -17,6 +17,24 @@ spring:
     time-zone: Asia/Ho_Chi_Minh
     default-property-inclusion: non_null
 
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 10MB
+
+  mail:
+    host: sandbox.smtp.mailtrap.io
+    port: 2525
+    username: f64f841677e6a3
+    password: 6e26a428f6aaab   # thay bằng password thật
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          ssl:
+            trust: sandbox.smtp.mailtrap.io
 
 server:
   port: 8080
@@ -27,4 +45,6 @@ app:
     expiration: 86400000      # 1 ngày (ms)
   order:
     shipping-fee: 30000
-
+  upload:
+    dir: uploads
+    public-path: /uploads

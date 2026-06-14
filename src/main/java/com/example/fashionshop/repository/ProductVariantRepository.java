@@ -20,4 +20,6 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
 
     //Tìm variant theo product + size + color
     Optional<ProductVariant> findByProductIdAndSizeAndColor(Long productId, String size, String color);
+
+    List<ProductVariant> findByProductId(Long productId);
 }

@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -66,10 +67,20 @@ public class CouponServiceImpl implements CouponService {
 
     @Override
     public List<CouponDto.Response> getAllCoupons() {
-        return couponRepository.findAll()
-                .stream()
+        return couponRepository.findAll().stream()
                 .map(couponMapper::toResponse)
-                .toList();
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<CouponDto.Response> getActiveCoupons() {
+        LocalDate today = LocalDate.now(); // ← LocalDate thay vì LocalDateTime
+        return couponRepository.findAll().stream()
+                .filter(c -> Boolean.TRUE.equals(c.getIsActive())
+                        && !c.getStartDate().isAfter(today)
+                        && c.getEndDate().isAfter(today))
+                .map(couponMapper::toResponse)
+                .collect(Collectors.toList());
     }
 
     // ========================

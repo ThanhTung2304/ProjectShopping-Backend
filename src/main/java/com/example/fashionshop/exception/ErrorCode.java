@@ -13,6 +13,7 @@ public enum ErrorCode {
     ACCOUNT_DISABLED            (HttpStatus.FORBIDDEN,           "Tài khoản đã bị vô hiệu hóa"),
     UNAUTHORIZED                (HttpStatus.UNAUTHORIZED,        "Bạn chưa đăng nhập"),
     FORBIDDEN                   (HttpStatus.FORBIDDEN,           "Bạn không có quyền thực hiện thao tác này"),
+    INVALID_OTP                 (HttpStatus.BAD_REQUEST,         "OTP không hợp lệ hoặc đã hết hạn"),
 
     // ===== USER =====
     USER_NOT_FOUND              (HttpStatus.NOT_FOUND,           "Không tìm thấy người dùng"),
@@ -29,6 +30,9 @@ public enum ErrorCode {
     // ===== PRODUCT =====
     PRODUCT_NOT_FOUND           (HttpStatus.NOT_FOUND,           "Không tìm thấy sản phẩm"),
     PRODUCT_SLUG_EXISTS         (HttpStatus.BAD_REQUEST,         "Slug sản phẩm đã tồn tại"),
+    PRODUCT_IMAGE_NOT_FOUND     (HttpStatus.NOT_FOUND,           "Khong tim thay anh san pham"),
+    INVALID_IMAGE_FILE          (HttpStatus.BAD_REQUEST,         "File anh khong hop le"),
+    FILE_STORAGE_ERROR          (HttpStatus.INTERNAL_SERVER_ERROR, "Khong the luu file anh"),
 
     // ===== PRODUCT VARIANT =====
     VARIANT_NOT_FOUND           (HttpStatus.NOT_FOUND,           "Không tìm thấy biến thể sản phẩm"),

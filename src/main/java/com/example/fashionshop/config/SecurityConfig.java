@@ -46,6 +46,7 @@ public class SecurityConfig {
                         // ===== PUBLIC =====
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/test").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
 
                         // Xem sản phẩm, danh mục, đánh giá không cần đăng nhập
                         .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
