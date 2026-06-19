@@ -1,5 +1,6 @@
 package com.example.fashionshop.entity;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
@@ -37,11 +38,17 @@ public class Payment {
     @Column(name = "paid_at")
     private LocalDateTime paidAt;
 
-    public enum PaymentMethod {
-        COD, BANK_TRANSFER, MOMO, VNPAY
-    }
-
     public enum PaymentStatus {
         PENDING, PAID, FAILED, REFUNDED
+    }
+
+    // Payment.java
+    public enum PaymentMethod {
+        VNPAY, MOMO, BANK_TRANSFER, COD;
+
+        @JsonCreator
+        public static PaymentMethod fromString(String value) {
+            return PaymentMethod.valueOf(value.toUpperCase());
+        }
     }
 }

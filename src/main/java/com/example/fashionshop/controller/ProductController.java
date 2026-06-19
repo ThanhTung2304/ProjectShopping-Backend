@@ -118,4 +118,12 @@ public class ProductController {
         productService.deleteVariant(variantId);
         return ResponseEntity.ok(ApiResponse.ok("Xóa biến thể thành công"));
     }
+
+    // GET /api/products/id/{productId}/variants
+    @GetMapping("/id/{productId}/variants")
+    public ResponseEntity<ApiResponse<List<VariantDto.Response>>> getVariantsByProductIdPath(
+            @PathVariable Long productId) {
+        return ResponseEntity.ok(ApiResponse.success(
+                productService.getVariantsByProductId(productId)));
+    }
 }

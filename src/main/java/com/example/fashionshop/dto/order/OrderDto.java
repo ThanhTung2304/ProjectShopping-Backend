@@ -62,11 +62,14 @@ public class OrderDto {
         private Long id;
         private String orderCode;
         private OrderStatus status;
+        private BigDecimal totalAmount;   // ← thêm
         private BigDecimal finalAmount;
-        private Integer totalItems;      // Tổng số loại sản phẩm
+        private Integer totalItems;
         private LocalDateTime orderedAt;
         private String paymentMethod;
         private String paymentStatus;
+        private String shippingName;      // ← thêm
+        private String shippingPhone;     // ← thêm
     }
 
     // ========================

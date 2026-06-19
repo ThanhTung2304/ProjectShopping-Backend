@@ -20,6 +20,13 @@ public class AdminOrderController {
 
     private final OrderService orderService;
 
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<OrderDto.Response>> getOrderDetail(
+            @PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success(
+                orderService.adminGetOrderDetail(id)));
+    }
+
     @GetMapping
     public ResponseEntity<ApiResponse<Page<OrderDto.Summary>>> getAllOrders(
             @RequestParam(required = false) String keyword,
