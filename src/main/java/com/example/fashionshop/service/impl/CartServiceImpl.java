@@ -29,6 +29,7 @@ public class CartServiceImpl implements CartService {
     // Lấy giỏ hàng
     // ========================
     @Override
+    @Transactional(readOnly = true)
     public CartDto.Response getCart(String email) {
         User user = findUserByEmail(email);
         List<CartItem> items = cartItemRepository.findByUserId(user.getId());

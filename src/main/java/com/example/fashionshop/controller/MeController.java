@@ -1,18 +1,4 @@
 //MeController dùng để gom các API liên quan đến người dùng đang đăng nhập hiện tại.
-//
-//        Thay vì gọi kiểu cũ:
-//
-//        GET /api/users/profile
-//        GET /api/addresses
-//        GET /api/orders
-//
-//        route mới sẽ rõ nghĩa hơn:
-//
-//        GET /api/me
-//        GET /api/me/addresses
-//        GET /api/me/orders
-//
-//        Ý nghĩa của /api/me là: “thông tin của chính user đang đăng nhập”, lấy từ token JWT trong header:
 
 package com.example.fashionshop.controller;
 
@@ -129,12 +115,19 @@ public class MeController {
                 orderService.getOrderDetail(userDetails.getUsername(), id)));
     }
 
-    @PatchMapping("/orders/{id}/status")
+    @PatchMapping("/orders/{id}/cancel")
     public ResponseEntity<ApiResponse<Void>> cancelOrder(
             @AuthenticationPrincipal UserDetails userDetails,
-            @PathVariable Long id,
-            @Valid @RequestBody OrderDto.UpdateStatusRequest request) {
-        orderService.updateMyOrderStatus(userDetails.getUsername(), id, request);
-        return ResponseEntity.ok(ApiResponse.ok("Cap nhat trang thai don hang thanh cong"));
+            @PathVariable Long id) {
+        orderService.cancelOrder(userDetails.getUsername(), id);
+        return ResponseEntity.ok(ApiResponse.ok("Hủy đơn hàng thành công"));
+    }
+
+    @PatchMapping("/orders/{id}/received")
+    public ResponseEntity<ApiResponse<Void>> confirmReceived(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long id) {
+        orderService.confirmReceived(userDetails.getUsername(), id);
+        return ResponseEntity.ok(ApiResponse.ok("Xác nhận đã nhận hàng thành công"));
     }
 }

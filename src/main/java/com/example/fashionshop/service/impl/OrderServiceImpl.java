@@ -154,6 +154,7 @@ public class OrderServiceImpl implements OrderService {
     // Lịch sử đơn hàng của user
     // ========================
     @Override
+    @Transactional(readOnly = true)
     public Page<OrderDto.Summary> getMyOrders(String email, Pageable pageable) {
         User user = findUserByEmail(email);
         return orderRepository.findByUserId(user.getId(), pageable)
@@ -167,6 +168,7 @@ public class OrderServiceImpl implements OrderService {
     // Chi tiết đơn hàng
     // ========================
     @Override
+    @Transactional(readOnly = true)
     public OrderDto.Response getOrderDetail(String email, Long orderId) {
         User user = findUserByEmail(email);
         Order order = orderRepository.findByIdAndUserId(orderId, user.getId())
@@ -202,19 +204,45 @@ public class OrderServiceImpl implements OrderService {
         });
     }
 
+    // ========================
+    // Khách xác nhận đã nhận hàng
+    // ========================
     @Override
     @Transactional
-    public void updateMyOrderStatus(String email, Long orderId, OrderDto.UpdateStatusRequest request) {
-        if (request.getStatus() != Order.OrderStatus.CANCELLED) {
-            throw new AppException(ErrorCode.FORBIDDEN);
+    public void confirmReceived(String email, Long orderId) {
+        User user = findUserByEmail(email);
+        Order order = orderRepository.findByIdAndUserId(orderId, user.getId())
+                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+
+        if (order.getStatus() != Order.OrderStatus.SHIPPING) {
+            throw new AppException(ErrorCode.ORDER_INVALID_STATUS_TRANSITION);
         }
-        cancelOrder(email, orderId);
+
+        order.setStatus(Order.OrderStatus.DELIVERED);
+        orderRepository.save(order);
+
+        Payment payment = paymentRepository.findByOrderId(orderId).orElse(null);
+        if (payment != null && payment.getMethod() == Payment.PaymentMethod.COD) {
+            payment.setStatus(Payment.PaymentStatus.PAID);
+            payment.setPaidAt(LocalDateTime.now());
+            paymentRepository.save(payment);
+        }
     }
+
+//    @Override
+//    @Transactional
+//    public void updateMyOrderStatus(String email, Long orderId, OrderDto.UpdateStatusRequest request) {
+//        if (request.getStatus() != Order.OrderStatus.CANCELLED) {
+//            throw new AppException(ErrorCode.FORBIDDEN);
+//        }
+//        cancelOrder(email, orderId);
+//    }
 
     // ========================
     // ADMIN: Lấy tất cả đơn hàng
     // ========================
     @Override
+    @Transactional(readOnly = true)
     public Page<OrderDto.Summary> getAllOrders(String keyword, String status, Pageable pageable) {
         Order.OrderStatus orderStatus = null;
         if (status != null && !status.isBlank()) {
@@ -244,6 +272,15 @@ public class OrderServiceImpl implements OrderService {
 
         order.setStatus(request.getStatus());
         orderRepository.save(order);
+
+        // Nếu Admin hủy đơn → hoàn lại tồn kho
+        if (request.getStatus() == Order.OrderStatus.CANCELLED) {
+            order.getOrderItems().forEach(item -> {
+                ProductVariant variant = item.getVariant();
+                variant.setStockQuantity(variant.getStockQuantity() + item.getQuantity());
+                variantRepository.save(variant);
+            });
+        }
 
         // Nếu DELIVERED → cập nhật Payment thành PAID (COD)
         Payment payment = paymentRepository.findByOrderId(orderId).orElse(null);
@@ -321,11 +358,23 @@ public class OrderServiceImpl implements OrderService {
                 .id(order.getId())
                 .orderCode(order.getOrderCode())
                 .status(order.getStatus())
-                .finalAmount(order.getFinalAmount())
+                .totalAmount(order.getTotalAmount())
+                .finalAmount(order.getFinalAmount())       // ← thêm
                 .totalItems(order.getOrderItems() != null ? order.getOrderItems().size() : 0)
                 .orderedAt(order.getOrderedAt())
                 .paymentMethod(payment != null ? payment.getMethod().name() : null)
                 .paymentStatus(payment != null ? payment.getStatus().name() : null)
+                .shippingName(order.getShippingName())     // ← thêm
+                .shippingPhone(order.getShippingPhone())   // ← thêm
                 .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public OrderDto.Response adminGetOrderDetail(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+        Payment payment = paymentRepository.findByOrderId(orderId).orElse(null);
+        return buildOrderResponse(order, payment);
     }
 }
