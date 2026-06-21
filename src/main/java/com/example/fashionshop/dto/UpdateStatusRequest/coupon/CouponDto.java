@@ -47,6 +47,8 @@ public class CouponDto {
     // REQUEST: Tạo mã giảm giá (ADMIN)
     // ========================
     @Getter
+    @Setter
+    @NoArgsConstructor
     public static class Request {
 
         @NotBlank(message = "Mã giảm giá không được để trống")
@@ -60,7 +62,7 @@ public class CouponDto {
         private BigDecimal discountValue;
 
         private BigDecimal minOrderValue = BigDecimal.ZERO;
-        private BigDecimal maxDiscount;  // Chỉ dùng khi PERCENT
+        private BigDecimal maxDiscount;
 
         @NotNull(message = "Giới hạn lượt dùng không được để trống")
         @Min(value = 1, message = "Giới hạn lượt dùng tối thiểu là 1")
@@ -77,6 +79,8 @@ public class CouponDto {
     // REQUEST: User nhập mã để kiểm tra
     // ========================
     @Getter
+    @Setter
+    @NoArgsConstructor
     public static class ApplyRequest {
 
         @NotBlank(message = "Mã giảm giá không được để trống")
