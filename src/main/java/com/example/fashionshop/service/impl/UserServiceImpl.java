@@ -6,6 +6,7 @@ import com.example.fashionshop.exception.AppException;
 import com.example.fashionshop.exception.ErrorCode;
 import com.example.fashionshop.mapper.UserMapper;
 import com.example.fashionshop.repository.OrderRepository;
+import com.example.fashionshop.repository.RefreshTokenRepository;
 import com.example.fashionshop.repository.ReviewRepository;
 import com.example.fashionshop.repository.UserRepository;
 import com.example.fashionshop.service.UserService;
@@ -25,6 +26,7 @@ public class UserServiceImpl implements UserService {
     private final ReviewRepository reviewRepository;
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     // ========================
     // Lấy thông tin profile
@@ -154,12 +156,12 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public void hardDeleteUser(Long id) {
-        User user = findById(id);
+    public void hardDeleteUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-        if (orderRepository.existsByUserId(id) || reviewRepository.existsByUserId(id)) {
-            throw new AppException(ErrorCode.USER_CANNOT_HARD_DELETE);
-        }
+        // Xóa các refresh token liên quan trước
+        refreshTokenRepository.deleteByUserId(userId);
 
         userRepository.delete(user);
     }

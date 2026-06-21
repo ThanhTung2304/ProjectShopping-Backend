@@ -84,4 +84,28 @@ public class AuthController {
         authService.resetPassword(request, otpService);
         return ResponseEntity.ok(ApiResponse.success("Đặt lại mật khẩu thành công", null));
     }
+
+    // Thêm vào sau method login()
+
+    // ========================
+// POST /api/auth/refresh-token
+// ========================
+    @PostMapping("/refresh-token")
+    public ResponseEntity<ApiResponse<RefreshTokenResponse>> refreshToken(
+            @Valid @RequestBody RefreshTokenRequest request) {
+
+        RefreshTokenResponse data = authService.refreshAccessToken(request.getRefreshToken());
+        return ResponseEntity.ok(ApiResponse.success("Làm mới token thành công", data));
+    }
+
+    // ========================
+// POST /api/auth/logout
+// ========================
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<String>> logout(
+            @RequestBody RefreshTokenRequest request) {
+
+        authService.logout(request.getRefreshToken());
+        return ResponseEntity.ok(ApiResponse.success("Đăng xuất thành công", null));
+    }
 }

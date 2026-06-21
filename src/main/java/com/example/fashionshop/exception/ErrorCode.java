@@ -14,6 +14,8 @@ public enum ErrorCode {
     UNAUTHORIZED                (HttpStatus.UNAUTHORIZED,        "Bạn chưa đăng nhập"),
     FORBIDDEN                   (HttpStatus.FORBIDDEN,           "Bạn không có quyền thực hiện thao tác này"),
     INVALID_OTP                 (HttpStatus.BAD_REQUEST,         "OTP không hợp lệ hoặc đã hết hạn"),
+    REFRESH_TOKEN_EXPIRED        (HttpStatus.UNAUTHORIZED,        "Refresh token đã hết hạn, vui lòng đăng nhập lại"),
+    INVALID_REFRESH_TOKEN        (HttpStatus.UNAUTHORIZED,        "Refresh token không hợp lệ"),
 
     // ===== USER =====
     USER_NOT_FOUND              (HttpStatus.NOT_FOUND,           "Không tìm thấy người dùng"),
