@@ -38,25 +38,33 @@ public class FileStorageService {
     }
 
     public String storeProductImage(MultipartFile file) {
+        return storeImage(file, "products");
+    }
+
+    public String storeCategoryImage(MultipartFile file) {
+        return storeImage(file, "categories");
+    }
+
+    private String storeImage(MultipartFile file, String folderName) {
         validateImage(file);
 
         String extension = getExtension(file);
         String filename = UUID.randomUUID() + "." + extension;
-        Path productDir = uploadRoot.resolve("products").normalize();
-        Path target = productDir.resolve(filename).normalize();
+        Path imageDir = uploadRoot.resolve(folderName).normalize();
+        Path target = imageDir.resolve(filename).normalize();
 
-        if (!target.startsWith(productDir)) {
+        if (!target.startsWith(imageDir)) {
             throw new AppException(ErrorCode.INVALID_IMAGE_FILE);
         }
 
         try {
-            Files.createDirectories(productDir);
+            Files.createDirectories(imageDir);
             Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException ex) {
             throw new AppException(ErrorCode.FILE_STORAGE_ERROR);
         }
 
-        return publicPath + "/products/" + filename;
+        return publicPath + "/" + folderName + "/" + filename;
     }
 
     public void deleteByPublicUrl(String imageUrl) {

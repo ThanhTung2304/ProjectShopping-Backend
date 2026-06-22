@@ -132,6 +132,15 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
+    public void adminChangePassword(Long id, UserDto.AdminChangePasswordRequest request) {
+        User user = findById(id);
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+        refreshTokenRepository.deleteByUserId(id);
+    }
+
+    @Override
+    @Transactional
     public UserDto.Response updateUserStatus(Long id, UserDto.UpdateStatusRequest request) {
         User user = findById(id);
         user.setIsActive(request.getIsActive());

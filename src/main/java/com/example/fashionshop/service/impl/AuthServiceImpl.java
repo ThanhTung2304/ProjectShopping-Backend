@@ -52,16 +52,7 @@ public class AuthServiceImpl implements AuthService {
 
         userRepository.save(user);
 
-        String token = jwtUtil.generateToken(user.getEmail());
-        RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
-
-        return AuthResponse.builder()
-                .token(token)
-                .refreshToken(refreshToken.getToken())
-                .email(user.getEmail())
-                .fullName(user.getFullName())
-                .role(user.getRole().name())
-                .build();
+        return createAuthResponse(user);
     }
 
     @Override
@@ -86,16 +77,7 @@ public class AuthServiceImpl implements AuthService {
             throw new AppException(ErrorCode.ACCOUNT_DISABLED);
         }
 
-        String token = jwtUtil.generateToken(user.getEmail());
-        RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
-
-        return AuthResponse.builder()
-                .token(token)
-                .refreshToken(refreshToken.getToken())
-                .email(user.getEmail())
-                .fullName(user.getFullName())
-                .role(user.getRole().name())
-                .build();
+        return createAuthResponse(user);
     }
 
     @Override
@@ -142,4 +124,18 @@ public class AuthServiceImpl implements AuthService {
 
         otpService.clearOtp(request.getEmail());
     }
+
+    private AuthResponse createAuthResponse(User user) {
+        String token = jwtUtil.generateToken(user.getEmail());
+        RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
+
+        return AuthResponse.builder()
+                .token(token)
+                .refreshToken(refreshToken.getToken())
+                .email(user.getEmail())
+                .fullName(user.getFullName())
+                .role(user.getRole().name())
+                .build();
+    }
+
 }

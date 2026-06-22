@@ -10,8 +10,11 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -44,6 +47,20 @@ public class GlobalExceptionHandler {
     }
 
     // ===== Bắt lỗi chưa đăng nhập =====
+    @ExceptionHandler({
+            MultipartException.class,
+            MaxUploadSizeExceededException.class,
+            MissingServletRequestParameterException.class
+    })
+    public ResponseEntity<ErrorResponse> handleUploadException(Exception ex) {
+        log.warn("Upload error: {}", ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ErrorResponse.of(
+                        ErrorCode.INVALID_IMAGE_FILE.name(),
+                        "File anh khong hop le, bi thieu truong file hoac vuot qua dung luong cho phep"
+                ));
+    }
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ErrorResponse> handleAuthenticationException(AuthenticationException ex) {
         return ResponseEntity

@@ -11,6 +11,7 @@ public interface UserService {
     Page<UserDto.Response> getAllUsers(Pageable pageable);
     UserDto.Response getUserById(Long id);
     UserDto.Response updateUser(Long id, UserDto.AdminUpdateRequest request);
+    void adminChangePassword(Long id, UserDto.AdminChangePasswordRequest request);
     UserDto.Response updateUserStatus(Long id, UserDto.UpdateStatusRequest request);
     UserDto.Response updateUserRole(Long id, UserDto.UpdateRoleRequest request);
     void deleteUser(Long id);

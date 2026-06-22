@@ -7,9 +7,11 @@ import com.example.fashionshop.exception.ErrorCode;
 import com.example.fashionshop.mapper.CategoryMapper;
 import com.example.fashionshop.repository.CategoryRepository;
 import com.example.fashionshop.service.CategoryService;
+import com.example.fashionshop.service.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -19,6 +21,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryRepository categoryRepository;
     private final CategoryMapper categoryMapper;
+    private final FileStorageService fileStorageService;
 
     @Override
     @Transactional(readOnly = true)
@@ -62,6 +65,8 @@ public class CategoryServiceImpl implements CategoryService {
             throw new AppException(ErrorCode.CATEGORY_SLUG_EXISTS);
         }
 
+        String oldImageUrl = category.getImageUrl();
+
         category.setName(request.getName());
         category.setSlug(request.getSlug());
         category.setParent(findParent(request.getParentId()));
@@ -71,7 +76,31 @@ public class CategoryServiceImpl implements CategoryService {
             category.setIsActive(request.getIsActive());
         }
 
-        return categoryMapper.toResponse(categoryRepository.save(category));
+        Category savedCategory = categoryRepository.save(category);
+        String newImageUrl = savedCategory.getImageUrl();
+
+        if (oldImageUrl != null && !oldImageUrl.equals(newImageUrl)) {
+            fileStorageService.deleteByPublicUrl(oldImageUrl);
+        }
+
+        return categoryMapper.toResponse(savedCategory);
+    }
+
+    @Override
+    @Transactional
+    public CategoryDto.Response updateCategoryImage(Long id, MultipartFile file) {
+        Category category = findCategory(id);
+        String oldImageUrl = category.getImageUrl();
+        String imageUrl = fileStorageService.storeCategoryImage(file);
+
+        category.setImageUrl(imageUrl);
+        Category savedCategory = categoryRepository.save(category);
+
+        if (oldImageUrl != null && !oldImageUrl.equals(imageUrl)) {
+            fileStorageService.deleteByPublicUrl(oldImageUrl);
+        }
+
+        return categoryMapper.toResponse(savedCategory);
     }
 
     @Override
