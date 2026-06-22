@@ -15,7 +15,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/admin/categories")
@@ -44,6 +46,14 @@ public class AdminCategoryController {
             @Valid @RequestBody CategoryDto.Request request) {
         return ResponseEntity.ok(ApiResponse.success("Cap nhat danh muc thanh cong",
                 categoryService.updateCategory(id, request)));
+    }
+
+    @PostMapping("/{id}/image")
+    public ResponseEntity<ApiResponse<CategoryDto.Response>> uploadCategoryImage(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file) {
+        return ResponseEntity.ok(ApiResponse.success("Upload anh danh muc thanh cong",
+                categoryService.updateCategoryImage(id, file)));
     }
 
     @DeleteMapping("/{id}")

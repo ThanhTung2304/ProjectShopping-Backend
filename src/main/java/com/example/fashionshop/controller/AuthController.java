@@ -10,7 +10,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = {
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174"
+})
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -83,5 +88,29 @@ public class AuthController {
             @RequestBody ResetPasswordRequest request) {
         authService.resetPassword(request, otpService);
         return ResponseEntity.ok(ApiResponse.success("Đặt lại mật khẩu thành công", null));
+    }
+
+    // Thêm vào sau method login()
+
+    // ========================
+// POST /api/auth/refresh-token
+// ========================
+    @PostMapping("/refresh-token")
+    public ResponseEntity<ApiResponse<RefreshTokenResponse>> refreshToken(
+            @Valid @RequestBody RefreshTokenRequest request) {
+
+        RefreshTokenResponse data = authService.refreshAccessToken(request.getRefreshToken());
+        return ResponseEntity.ok(ApiResponse.success("Làm mới token thành công", data));
+    }
+
+    // ========================
+// POST /api/auth/logout
+// ========================
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<String>> logout(
+            @RequestBody RefreshTokenRequest request) {
+
+        authService.logout(request.getRefreshToken());
+        return ResponseEntity.ok(ApiResponse.success("Đăng xuất thành công", null));
     }
 }

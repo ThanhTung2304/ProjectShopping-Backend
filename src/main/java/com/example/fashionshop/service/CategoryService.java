@@ -1,6 +1,7 @@
 package com.example.fashionshop.service;
 
 import com.example.fashionshop.dto.category.CategoryDto;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -12,6 +13,8 @@ public interface CategoryService {
     CategoryDto.Response createCategory(CategoryDto.Request request);
 
     CategoryDto.Response updateCategory(Long id, CategoryDto.Request request);
+
+    CategoryDto.Response updateCategoryImage(Long id, MultipartFile file);
 
     void deleteCategory(Long id);
 }

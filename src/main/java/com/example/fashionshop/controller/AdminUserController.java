@@ -46,6 +46,14 @@ public class AdminUserController {
                 userService.updateUser(id, request)));
     }
 
+    @PatchMapping("/{id}/password")
+    public ResponseEntity<ApiResponse<Void>> changePassword(
+            @PathVariable Long id,
+            @Valid @RequestBody UserDto.AdminChangePasswordRequest request) {
+        userService.adminChangePassword(id, request);
+        return ResponseEntity.ok(ApiResponse.ok("Doi mat khau tai khoan thanh cong"));
+    }
+
     @PatchMapping("/{id}/status")
     public ResponseEntity<ApiResponse<UserDto.Response>> updateUserStatus(
             @PathVariable Long id,

@@ -1,16 +1,15 @@
 package com.example.fashionshop.service.impl;
 
 import com.example.fashionshop.config.JwtUtil;
-import com.example.fashionshop.dto.auth.AuthResponse;
-import com.example.fashionshop.dto.auth.LoginRequest;
-import com.example.fashionshop.dto.auth.RegisterRequest;
-import com.example.fashionshop.dto.auth.ResetPasswordRequest;
+import com.example.fashionshop.dto.auth.*;
+import com.example.fashionshop.entity.RefreshToken;
 import com.example.fashionshop.entity.User;
 import com.example.fashionshop.exception.AppException;
 import com.example.fashionshop.exception.ErrorCode;
 import com.example.fashionshop.repository.UserRepository;
 import com.example.fashionshop.service.AuthService;
 import com.example.fashionshop.service.OtpService;
+import com.example.fashionshop.service.RefreshTokenService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -27,10 +26,8 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
+    private final RefreshTokenService refreshTokenService;
 
-    // ========================
-    // ĐĂNG KÝ
-    // ========================
     @Override
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -55,20 +52,11 @@ public class AuthServiceImpl implements AuthService {
 
         userRepository.save(user);
 
-        String token = jwtUtil.generateToken(user.getEmail());
-
-        return AuthResponse.builder()
-                .token(token)
-                .email(user.getEmail())
-                .fullName(user.getFullName())
-                .role(user.getRole().name())
-                .build();
+        return createAuthResponse(user);
     }
 
-    // ========================
-    // ĐĂNG NHẬP
-    // ========================
     @Override
+    @Transactional
     public AuthResponse login(LoginRequest request) {
 
         try {
@@ -89,51 +77,65 @@ public class AuthServiceImpl implements AuthService {
             throw new AppException(ErrorCode.ACCOUNT_DISABLED);
         }
 
-        String token = jwtUtil.generateToken(user.getEmail());
+        return createAuthResponse(user);
+    }
 
-        return AuthResponse.builder()
-                .token(token)
-                .email(user.getEmail())
-                .fullName(user.getFullName())
-                .role(user.getRole().name())
+    @Override
+    @Transactional
+    public RefreshTokenResponse refreshAccessToken(String requestRefreshToken) {
+        RefreshToken refreshToken = refreshTokenService.findByToken(requestRefreshToken);
+        refreshTokenService.verifyExpiration(refreshToken);
+
+        User user = refreshToken.getUser();
+        String newAccessToken = jwtUtil.generateToken(user.getEmail());
+
+        return RefreshTokenResponse.builder()
+                .token(newAccessToken)
                 .build();
     }
 
-    // ========================
-    // QUÊN MẬT KHẨU — gửi OTP
-    // ========================
+    @Override
+    @Transactional
+    public void logout(String requestRefreshToken) {
+        RefreshToken refreshToken = refreshTokenService.findByToken(requestRefreshToken);
+        refreshTokenService.deleteByUser(refreshToken.getUser());
+    }
+
     @Override
     public void forgotPassword(String email, OtpService otpService) {
-
-        // Kiểm tra email có tồn tại không
         if (!userRepository.existsByEmail(email)) {
             throw new AppException(ErrorCode.USER_NOT_FOUND);
         }
-
-        // Tạo OTP và gửi mail
         otpService.generateAndSend(email);
     }
 
-    // ========================
-    // ĐẶT LẠI MẬT KHẨU
-    // ========================
     @Override
     @Transactional
     public void resetPassword(ResetPasswordRequest request, OtpService otpService) {
-
-        // Xác thực OTP lần cuối
         if (!otpService.verifyOtp(request.getEmail(), request.getOtp())) {
             throw new AppException(ErrorCode.INVALID_OTP);
         }
 
-        // Lấy user và cập nhật password
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
 
-        // Xóa OTP sau khi dùng xong
         otpService.clearOtp(request.getEmail());
     }
+
+    private AuthResponse createAuthResponse(User user) {
+        String token = jwtUtil.generateToken(user.getEmail());
+        RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
+
+        return AuthResponse.builder()
+                .token(token)
+                .refreshToken(refreshToken.getToken())
+                .email(user.getEmail())
+                .fullName(user.getFullName())
+                .role(user.getRole().name())
+                .build();
+    }
+
 }

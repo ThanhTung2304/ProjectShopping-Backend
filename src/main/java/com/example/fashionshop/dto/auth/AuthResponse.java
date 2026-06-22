@@ -13,7 +13,8 @@ import lombok.Getter;
 @Builder
 @AllArgsConstructor
 public class AuthResponse {
-    private String token;    // JWT token → client lưu lại dùng cho các request tiếp theo
+    private String token;
+    private String refreshToken;
     private String email;
     private String fullName;
     private String role;

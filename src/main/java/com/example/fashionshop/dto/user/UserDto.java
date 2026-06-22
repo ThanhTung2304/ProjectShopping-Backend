@@ -69,6 +69,13 @@ public class UserDto {
     }
 
     @Getter
+    public static class AdminChangePasswordRequest {
+        @NotBlank(message = "Mat khau moi khong duoc de trong")
+        @Size(min = 6, message = "Mat khau moi toi thieu 6 ki tu")
+        private String newPassword;
+    }
+
+    @Getter
     public static class AdminUpdateRequest {
         private String fullName;
 
