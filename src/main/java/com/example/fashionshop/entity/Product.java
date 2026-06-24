@@ -29,6 +29,11 @@ public class Product {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "size_type", nullable = false, length = 20, columnDefinition = "VARCHAR(20) DEFAULT 'CLOTHING'")
+    private SizeType sizeType = SizeType.CLOTHING;
+
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
 
@@ -49,12 +54,22 @@ public class Product {
 
     @PrePersist
     public void prePersist() {
+        if (sizeType == null) {
+            sizeType = SizeType.CLOTHING;
+        }
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
     }
 
     @PreUpdate
     public void preUpdate() {
+        if (sizeType == null) {
+            sizeType = SizeType.CLOTHING;
+        }
         updatedAt = LocalDateTime.now();
+    }
+
+    public enum SizeType {
+        CLOTHING, PANTS, SHOES, FREE_SIZE
     }
 }
