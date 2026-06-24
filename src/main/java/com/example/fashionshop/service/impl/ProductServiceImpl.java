@@ -25,10 +25,15 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class ProductServiceImpl implements ProductService {
+
+    private static final Set<String> CLOTHING_SIZES = Set.of("S", "M", "L", "XL", "XXL");
+    private static final Set<String> FREE_SIZE_VALUES = Set.of("FREE_SIZE", "ONE_SIZE", "FREESIZE");
 
     private final ProductRepository productRepository;
     private final ProductVariantRepository variantRepository;
@@ -83,6 +88,7 @@ public class ProductServiceImpl implements ProductService {
                             .name(summary.getName())
                             .slug(summary.getSlug())
                             .categoryName(summary.getCategoryName())
+                            .sizeType(summary.getSizeType())
                             .primaryImageUrl(primaryImageUrl)
                             .minPrice(min)
                             .maxPrice(max)
@@ -131,6 +137,7 @@ public class ProductServiceImpl implements ProductService {
                 .slug(request.getSlug())
                 .description(request.getDescription())
                 .category(category)
+                .sizeType(resolveSizeType(request.getSizeType()))
                 .isActive(request.getIsActive() != null ? request.getIsActive() : true)
                 .build();
 
@@ -155,6 +162,7 @@ public class ProductServiceImpl implements ProductService {
         product.setSlug(request.getSlug());
         product.setDescription(request.getDescription());
         product.setCategory(category);
+        product.setSizeType(resolveSizeType(request.getSizeType()));
 
         if (request.getIsActive() != null) {
             product.setIsActive(request.getIsActive());
@@ -253,9 +261,11 @@ public class ProductServiceImpl implements ProductService {
             throw new AppException(ErrorCode.VARIANT_SKU_EXISTS);
         }
 
+        String normalizedSize = normalizeAndValidateSize(product, request.getSize());
+
         ProductVariant variant = ProductVariant.builder()
                 .product(product)
-                .size(request.getSize())
+                .size(normalizedSize)
                 .color(request.getColor())
                 .price(request.getPrice())
                 .salePrice(request.getSalePrice())
@@ -278,7 +288,9 @@ public class ProductServiceImpl implements ProductService {
             throw new AppException(ErrorCode.VARIANT_SKU_EXISTS);
         }
 
-        variant.setSize(request.getSize());
+        String normalizedSize = normalizeAndValidateSize(variant.getProduct(), request.getSize());
+
+        variant.setSize(normalizedSize);
         variant.setColor(request.getColor());
         variant.setPrice(request.getPrice());
         variant.setSalePrice(request.getSalePrice());
@@ -310,6 +322,7 @@ public class ProductServiceImpl implements ProductService {
                 .slug(response.getSlug())
                 .description(response.getDescription())
                 .categoryName(response.getCategoryName())
+                .sizeType(response.getSizeType())
                 .isActive(response.getIsActive())
                 .createdAt(response.getCreatedAt())
                 .variants(response.getVariants())
@@ -329,5 +342,52 @@ public class ProductServiceImpl implements ProductService {
         return variantRepository.findByProductId(productId).stream()
                 .map(variantMapper::toResponse)
                 .toList();
+    }
+
+    private Product.SizeType resolveSizeType(Product.SizeType sizeType) {
+        return sizeType != null ? sizeType : Product.SizeType.CLOTHING;
+    }
+
+    private String normalizeAndValidateSize(Product product, String rawSize) {
+        String size = rawSize == null ? "" : rawSize.trim();
+        if (size.isBlank()) {
+            throw new AppException(ErrorCode.VALIDATION_ERROR, "Size khong duoc de trong");
+        }
+
+        Product.SizeType sizeType = resolveSizeType(product.getSizeType());
+        return switch (sizeType) {
+            case CLOTHING -> validateClothingSize(size);
+            case PANTS -> validateNumericSize(size, 28, 38, "Size quan phai tu 28 den 38");
+            case SHOES -> validateNumericSize(size, 35, 44, "Size giay phai tu 35 den 44");
+            case FREE_SIZE -> validateFreeSize(size);
+        };
+    }
+
+    private String validateClothingSize(String size) {
+        String normalized = size.toUpperCase(Locale.ROOT);
+        if (!CLOTHING_SIZES.contains(normalized)) {
+            throw new AppException(ErrorCode.VALIDATION_ERROR, "Size ao phai la S, M, L, XL hoac XXL");
+        }
+        return normalized;
+    }
+
+    private String validateNumericSize(String size, int min, int max, String message) {
+        try {
+            int value = Integer.parseInt(size);
+            if (value < min || value > max) {
+                throw new AppException(ErrorCode.VALIDATION_ERROR, message);
+            }
+            return String.valueOf(value);
+        } catch (NumberFormatException ex) {
+            throw new AppException(ErrorCode.VALIDATION_ERROR, message);
+        }
+    }
+
+    private String validateFreeSize(String size) {
+        String normalized = size.toUpperCase(Locale.ROOT).replace(" ", "_");
+        if (!FREE_SIZE_VALUES.contains(normalized)) {
+            throw new AppException(ErrorCode.VALIDATION_ERROR, "Size free size phai la FREE_SIZE hoac ONE_SIZE");
+        }
+        return "FREE_SIZE";
     }
 }
