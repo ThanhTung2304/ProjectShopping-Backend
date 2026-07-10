@@ -1,14 +1,17 @@
 package com.example.fashionshop.service.impl;
 
 import com.example.fashionshop.dto.user.UserDto;
+import com.example.fashionshop.entity.Notification.NotificationType;
 import com.example.fashionshop.entity.User;
 import com.example.fashionshop.exception.AppException;
 import com.example.fashionshop.exception.ErrorCode;
 import com.example.fashionshop.mapper.UserMapper;
+import com.example.fashionshop.repository.NotificationRepository;
 import com.example.fashionshop.repository.OrderRepository;
 import com.example.fashionshop.repository.RefreshTokenRepository;
 import com.example.fashionshop.repository.ReviewRepository;
 import com.example.fashionshop.repository.UserRepository;
+import com.example.fashionshop.service.NotificationService;
 import com.example.fashionshop.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -27,6 +30,8 @@ public class UserServiceImpl implements UserService {
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final NotificationRepository notificationRepository;
+    private final NotificationService notificationService;
 
     // ========================
     // Lấy thông tin profile
@@ -55,7 +60,15 @@ public class UserServiceImpl implements UserService {
         user.setFullName(request.getFullName());
         user.setPhone(request.getPhone());
 
-        return userMapper.toResponse(userRepository.save(user));
+        User savedUser = userRepository.save(user);
+        notificationService.create(
+                savedUser,
+                "Thong tin tai khoan da cap nhat",
+                "Thong tin tai khoan cua ban da duoc cap nhat.",
+                NotificationType.PROFILE_UPDATED,
+                savedUser.getId());
+
+        return userMapper.toResponse(savedUser);
     }
 
     // ========================
@@ -73,6 +86,12 @@ public class UserServiceImpl implements UserService {
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
+        notificationService.create(
+                user,
+                "Mat khau da thay doi",
+                "Mat khau tai khoan cua ban da duoc thay doi.",
+                NotificationType.PASSWORD_CHANGED,
+                user.getId());
     }
 
     @Override
@@ -137,6 +156,12 @@ public class UserServiceImpl implements UserService {
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
         refreshTokenRepository.deleteByUserId(id);
+        notificationService.create(
+                user,
+                "Mat khau da duoc admin thay doi",
+                "Mat khau tai khoan cua ban da duoc quan tri vien thay doi.",
+                NotificationType.PASSWORD_CHANGED,
+                user.getId());
     }
 
     @Override
@@ -144,7 +169,15 @@ public class UserServiceImpl implements UserService {
     public UserDto.Response updateUserStatus(Long id, UserDto.UpdateStatusRequest request) {
         User user = findById(id);
         user.setIsActive(request.getIsActive());
-        return userMapper.toResponse(userRepository.save(user));
+        User savedUser = userRepository.save(user);
+        notificationService.create(
+                savedUser,
+                "Trang thai tai khoan da cap nhat",
+                "Tai khoan cua ban da duoc cap nhat trang thai: "
+                        + (Boolean.TRUE.equals(savedUser.getIsActive()) ? "ACTIVE" : "INACTIVE") + ".",
+                NotificationType.ACCOUNT_STATUS_UPDATED,
+                savedUser.getId());
+        return userMapper.toResponse(savedUser);
     }
 
     @Override
@@ -152,7 +185,14 @@ public class UserServiceImpl implements UserService {
     public UserDto.Response updateUserRole(Long id, UserDto.UpdateRoleRequest request) {
         User user = findById(id);
         user.setRole(parseRole(request.getRole()));
-        return userMapper.toResponse(userRepository.save(user));
+        User savedUser = userRepository.save(user);
+        notificationService.create(
+                savedUser,
+                "Quyen tai khoan da cap nhat",
+                "Tai khoan cua ban da duoc cap nhat quyen: " + savedUser.getRole().name() + ".",
+                NotificationType.ACCOUNT_ROLE_UPDATED,
+                savedUser.getId());
+        return userMapper.toResponse(savedUser);
     }
 
     @Override
@@ -161,6 +201,12 @@ public class UserServiceImpl implements UserService {
         User user = findById(id);
         user.setIsActive(false);
         userRepository.save(user);
+        notificationService.create(
+                user,
+                "Tai khoan da bi vo hieu hoa",
+                "Tai khoan cua ban da bi vo hieu hoa.",
+                NotificationType.ACCOUNT_STATUS_UPDATED,
+                user.getId());
     }
 
     @Override
@@ -171,6 +217,7 @@ public class UserServiceImpl implements UserService {
 
         // Xóa các refresh token liên quan trước
         refreshTokenRepository.deleteByUserId(userId);
+        notificationRepository.deleteByUserId(userId);
 
         userRepository.delete(user);
     }

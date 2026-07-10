@@ -2,12 +2,14 @@ package com.example.fashionshop.service.impl;
 
 import com.example.fashionshop.dto.order.OrderDto;
 import com.example.fashionshop.entity.*;
+import com.example.fashionshop.entity.Notification.NotificationType;
 import com.example.fashionshop.exception.AppException;
 import com.example.fashionshop.exception.ErrorCode;
 import com.example.fashionshop.mapper.OrderMapper;
 import com.example.fashionshop.repository.*;
 import com.example.fashionshop.service.CartService;
 import com.example.fashionshop.service.CouponService;
+import com.example.fashionshop.service.NotificationService;
 import com.example.fashionshop.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -38,6 +40,7 @@ public class OrderServiceImpl implements OrderService {
     private final CouponService couponService;
     private final CartService cartService;
     private final OrderMapper orderMapper;
+    private final NotificationService notificationService;
 
     @Value("${app.order.shipping-fee:30000}")
     private BigDecimal shippingFee;
@@ -202,6 +205,13 @@ public class OrderServiceImpl implements OrderService {
             variant.setStockQuantity(variant.getStockQuantity() + item.getQuantity());
             variantRepository.save(variant);
         });
+
+        notificationService.create(
+                user,
+                "Don hang da huy",
+                "Don hang " + order.getOrderCode() + " cua ban da duoc huy.",
+                NotificationType.ORDER_CANCELLED,
+                order.getId());
     }
 
     // ========================
@@ -227,6 +237,13 @@ public class OrderServiceImpl implements OrderService {
             payment.setPaidAt(LocalDateTime.now());
             paymentRepository.save(payment);
         }
+
+        notificationService.create(
+                user,
+                "Da xac nhan nhan hang",
+                "Don hang " + order.getOrderCode() + " da duoc xac nhan la da giao thanh cong.",
+                NotificationType.ORDER_DELIVERED,
+                order.getId());
     }
 
 //    @Override
@@ -291,6 +308,13 @@ public class OrderServiceImpl implements OrderService {
             payment.setPaidAt(LocalDateTime.now());
             paymentRepository.save(payment);
         }
+
+        notificationService.create(
+                order.getUser(),
+                "Trang thai don hang da cap nhat",
+                "Don hang " + order.getOrderCode() + " da chuyen sang trang thai " + request.getStatus().name() + ".",
+                NotificationType.ORDER_STATUS_UPDATED,
+                order.getId());
 
         return buildOrderResponse(order, payment);
     }
