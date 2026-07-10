@@ -21,6 +21,9 @@ public enum ErrorCode {
     USER_NOT_FOUND              (HttpStatus.NOT_FOUND,           "Không tìm thấy người dùng"),
     USER_CANNOT_HARD_DELETE     (HttpStatus.BAD_REQUEST,         "Khong the xoa cung tai khoan da co don hang hoac danh gia"),
 
+    // ===== NOTIFICATION =====
+    NOTIFICATION_NOT_FOUND      (HttpStatus.NOT_FOUND,           "Khong tim thay thong bao"),
+
     // ===== ADDRESS =====
     ADDRESS_NOT_FOUND           (HttpStatus.NOT_FOUND,           "Không tìm thấy địa chỉ"),
     ADDRESS_NOT_BELONG_TO_USER  (HttpStatus.FORBIDDEN,           "Địa chỉ không thuộc về người dùng này"),
