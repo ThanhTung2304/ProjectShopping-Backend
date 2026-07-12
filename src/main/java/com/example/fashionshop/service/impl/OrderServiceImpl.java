@@ -67,12 +67,6 @@ public class OrderServiceImpl implements OrderService {
         BigDecimal totalAmount = BigDecimal.ZERO;
         for (CartItem item : cartItems) {
             ProductVariant variant = item.getVariant();
-            if (variant.getStockQuantity() < item.getQuantity()) {
-                throw new AppException(ErrorCode.VARIANT_NOT_ENOUGH_STOCK,
-                        "Sản phẩm " + variant.getProduct().getName()
-                                + " (" + variant.getSize() + "/" + variant.getColor()
-                                + ") không đủ tồn kho");
-            }
             BigDecimal price = variant.getSalePrice() != null
                     ? variant.getSalePrice() : variant.getPrice();
             totalAmount = totalAmount.add(price.multiply(BigDecimal.valueOf(item.getQuantity())));
@@ -111,6 +105,14 @@ public class OrderServiceImpl implements OrderService {
         // 6. Tạo OrderItems + trừ tồn kho
         for (CartItem item : cartItems) {
             ProductVariant variant = item.getVariant();
+
+            int update = variantRepository.decreaseStock(variant.getId(), item.getQuantity());
+            if (update == 0) {
+                throw new AppException(ErrorCode.VARIANT_NOT_ENOUGH_STOCK,
+                        "Sản phẩm " + variant.getProduct().getName()
+                        + " (" + variant.getSize() + "/" + variant.getColor() + ") không đủ tồn kho");
+            }
+
             BigDecimal price = variant.getSalePrice() != null
                     ? variant.getSalePrice() : variant.getPrice();
 
@@ -127,9 +129,6 @@ public class OrderServiceImpl implements OrderService {
 
             orderItemRepository.save(orderItem);
 
-            // Trừ tồn kho
-            variant.setStockQuantity(variant.getStockQuantity() - item.getQuantity());
-            variantRepository.save(variant);
         }
 
         // 7. Tạo Payment
@@ -202,8 +201,7 @@ public class OrderServiceImpl implements OrderService {
         // Hoàn lại tồn kho
         order.getOrderItems().forEach(item -> {
             ProductVariant variant = item.getVariant();
-            variant.setStockQuantity(variant.getStockQuantity() + item.getQuantity());
-            variantRepository.save(variant);
+            variantRepository.increaseStock(variant.getId(), item.getQuantity());
         });
 
         notificationService.create(
@@ -294,8 +292,7 @@ public class OrderServiceImpl implements OrderService {
         if (request.getStatus() == Order.OrderStatus.CANCELLED) {
             order.getOrderItems().forEach(item -> {
                 ProductVariant variant = item.getVariant();
-                variant.setStockQuantity(variant.getStockQuantity() + item.getQuantity());
-                variantRepository.save(variant);
+                variantRepository.increaseStock(variant.getId(), item.getQuantity());
             });
         }
 
@@ -311,8 +308,8 @@ public class OrderServiceImpl implements OrderService {
 
         notificationService.create(
                 order.getUser(),
-                "Trang thai don hang da cap nhat",
-                "Don hang " + order.getOrderCode() + " da chuyen sang trang thai " + request.getStatus().name() + ".",
+                "Trạng thái đơn hàng đã câập nhật",
+                "Đơn hàng" + order.getOrderCode() + " đã chuyê sang trạng thái " + request.getStatus().name() + ".",
                 NotificationType.ORDER_STATUS_UPDATED,
                 order.getId());
 

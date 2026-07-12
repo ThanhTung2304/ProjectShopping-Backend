@@ -26,6 +26,6 @@ public interface CouponRepository extends JpaRepository<Coupon, Long> {
 
     // Tăng used_count khi áp dụng coupon thành công
     @Modifying
-    @Query("UPDATE Coupon c SET c.usedCount = c.usedCount + 1 WHERE c.id = :id")
-    void incrementUsedCount(Long id);
+    @Query("UPDATE Coupon c SET c.usedCount = c.usedCount + 1 WHERE c.id = :id AND c.usedCount < c.usageLimit")
+    int incrementUsedCount(Long id);
 }
