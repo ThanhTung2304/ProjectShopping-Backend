@@ -64,4 +64,8 @@ public class User {
     public enum Role {
         CUSTOMER, ADMIN
     }
+
+    @Column(name = "must_change_password")
+    @Builder.Default
+    private Boolean mustChangePassword = false;
 }

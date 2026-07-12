@@ -62,7 +62,10 @@ public class CouponServiceImpl implements CouponService {
     @Override
     @Transactional
     public void incrementUsage(Long couponId) {
-        couponRepository.incrementUsedCount(couponId);
+        int update = couponRepository.incrementUsedCount(couponId);
+        if (update == 0) {
+            throw new AppException(ErrorCode.COUPON_INVALID, "Mã giảm giá dã hết lượt sử dụng");
+        }
     }
 
     @Override

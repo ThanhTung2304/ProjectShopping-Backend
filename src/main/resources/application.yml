@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/fashion_store?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true}
-    username: ${SPRING_DATASOURCE_USERNAME:root}
-    password: ${SPRING_DATASOURCE_PASSWORD:123456}
+    url: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     open-in-view: false
@@ -25,8 +25,8 @@ spring:
   mail:
     host: sandbox.smtp.mailtrap.io
     port: 2525
-    username: f64f841677e6a3
-    password: 6e26a428f6aaab   # thay bằng password thật
+    username: ${MAILTRAP_USERNAME}   # thay bằng username thật
+    password: ${MAILTRAP_PASSWORD}   # thay bằng password thật
     properties:
       mail:
         smtp:
@@ -41,8 +41,8 @@ server:
 
 app:
   jwt:
-    secret: fashionstore_super_secret_key_2024_do_not_share
-    expiration: 900000   # 1 ngày (ms)
+    secret: ${JWT_SECRET}   # thay bằng secret thật
+    expiration: ${JWT_EXPIRATION:86400000}   # 1 ngày (ms)
   order:
     shipping-fee: 30000
   upload:
