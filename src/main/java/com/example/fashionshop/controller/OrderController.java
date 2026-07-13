@@ -3,6 +3,7 @@ package com.example.fashionshop.controller;
 import com.example.fashionshop.dto.ApiResponse;
 import com.example.fashionshop.dto.order.OrderDto;
 import com.example.fashionshop.service.OrderService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -22,9 +23,10 @@ public class OrderController {
     @PostMapping
     public ResponseEntity<ApiResponse<OrderDto.Response>> placeOrder(
             @AuthenticationPrincipal UserDetails userDetails,
-            @Valid @RequestBody OrderDto.PlaceOrderRequest request) {
+            @Valid @RequestBody OrderDto.PlaceOrderRequest request,
+            HttpServletRequest httpRequest) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Đặt hàng thành công",
-                        orderService.placeOrder(userDetails.getUsername(), request)));
+                        orderService.placeOrder(userDetails.getUsername(), request, httpRequest)));
     }
 }

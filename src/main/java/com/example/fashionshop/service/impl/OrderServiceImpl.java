@@ -11,6 +11,8 @@ import com.example.fashionshop.service.CartService;
 import com.example.fashionshop.service.CouponService;
 import com.example.fashionshop.service.NotificationService;
 import com.example.fashionshop.service.OrderService;
+import com.example.fashionshop.service.VnPayService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -41,6 +43,7 @@ public class OrderServiceImpl implements OrderService {
     private final CartService cartService;
     private final OrderMapper orderMapper;
     private final NotificationService notificationService;
+    private final VnPayService vnPayService;
 
     @Value("${app.order.shipping-fee:30000}")
     private BigDecimal shippingFee;
@@ -50,7 +53,8 @@ public class OrderServiceImpl implements OrderService {
     // ========================
     @Override
     @Transactional
-    public OrderDto.Response placeOrder(String email, OrderDto.PlaceOrderRequest request) {
+    public OrderDto.Response placeOrder(String email, OrderDto.PlaceOrderRequest request,
+                                        HttpServletRequest httpRequest) {
         User user = findUserByEmail(email);
 
         // 1. Lấy giỏ hàng
@@ -63,7 +67,7 @@ public class OrderServiceImpl implements OrderService {
         Address address = addressRepository.findByIdAndUserId(request.getAddressId(), user.getId())
                 .orElseThrow(() -> new AppException(ErrorCode.ADDRESS_NOT_FOUND));
 
-        // 3. Tính tổng tiền + kiểm tra tồn kho
+        // 3. Tính tổng tiền
         BigDecimal totalAmount = BigDecimal.ZERO;
         for (CartItem item : cartItems) {
             ProductVariant variant = item.getVariant();
@@ -102,15 +106,16 @@ public class OrderServiceImpl implements OrderService {
 
         orderRepository.save(order);
 
-        // 6. Tạo OrderItems + trừ tồn kho
+        // 6. Tạo OrderItems + trừ tồn kho (atomic, chống oversell)
         for (CartItem item : cartItems) {
             ProductVariant variant = item.getVariant();
 
-            int update = variantRepository.decreaseStock(variant.getId(), item.getQuantity());
-            if (update == 0) {
+            int updated = variantRepository.decreaseStock(variant.getId(), item.getQuantity());
+            if (updated == 0) {
                 throw new AppException(ErrorCode.VARIANT_NOT_ENOUGH_STOCK,
                         "Sản phẩm " + variant.getProduct().getName()
-                        + " (" + variant.getSize() + "/" + variant.getColor() + ") không đủ tồn kho");
+                                + " (" + variant.getSize() + "/" + variant.getColor()
+                                + ") không đủ tồn kho");
             }
 
             BigDecimal price = variant.getSalePrice() != null
@@ -128,7 +133,6 @@ public class OrderServiceImpl implements OrderService {
                     .build();
 
             orderItemRepository.save(orderItem);
-
         }
 
         // 7. Tạo Payment
@@ -141,7 +145,7 @@ public class OrderServiceImpl implements OrderService {
 
         paymentRepository.save(payment);
 
-        // 8. Tăng lượt dùng coupon
+        // 8. Tăng lượt dùng coupon (atomic, chống vượt quota)
         if (coupon != null) {
             couponService.incrementUsage(coupon.getId());
         }
@@ -149,7 +153,13 @@ public class OrderServiceImpl implements OrderService {
         // 9. Xóa giỏ hàng
         cartService.clearCart(email);
 
-        return buildOrderResponse(order, payment);
+        // 10. Nếu thanh toán VNPay, tạo payment URL
+        String paymentUrl = null;
+        if (request.getPaymentMethod() == Payment.PaymentMethod.VNPAY) {
+            paymentUrl = vnPayService.createPaymentUrl(order, httpRequest);
+        }
+
+        return buildOrderResponse(order, payment, paymentUrl);
     }
 
     // ========================
@@ -176,7 +186,7 @@ public class OrderServiceImpl implements OrderService {
         Order order = orderRepository.findByIdAndUserId(orderId, user.getId())
                 .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
         Payment payment = paymentRepository.findByOrderId(orderId).orElse(null);
-        return buildOrderResponse(order, payment);
+        return buildOrderResponse(order, payment, null);
     }
 
     // ========================
@@ -189,7 +199,6 @@ public class OrderServiceImpl implements OrderService {
         Order order = orderRepository.findByIdAndUserId(orderId, user.getId())
                 .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
 
-        // Chỉ hủy được khi PENDING hoặc CONFIRMED
         if (order.getStatus() != Order.OrderStatus.PENDING
                 && order.getStatus() != Order.OrderStatus.CONFIRMED) {
             throw new AppException(ErrorCode.ORDER_CANNOT_CANCEL);
@@ -197,6 +206,13 @@ public class OrderServiceImpl implements OrderService {
 
         order.setStatus(Order.OrderStatus.CANCELLED);
         orderRepository.save(order);
+
+        // Đồng bộ Payment
+        Payment payment = paymentRepository.findByOrderId(orderId).orElse(null);
+        if (payment != null && payment.getStatus() == Payment.PaymentStatus.PENDING) {
+            payment.setStatus(Payment.PaymentStatus.FAILED);
+            paymentRepository.save(payment);
+        }
 
         // Hoàn lại tồn kho
         order.getOrderItems().forEach(item -> {
@@ -244,15 +260,6 @@ public class OrderServiceImpl implements OrderService {
                 order.getId());
     }
 
-//    @Override
-//    @Transactional
-//    public void updateMyOrderStatus(String email, Long orderId, OrderDto.UpdateStatusRequest request) {
-//        if (request.getStatus() != Order.OrderStatus.CANCELLED) {
-//            throw new AppException(ErrorCode.FORBIDDEN);
-//        }
-//        cancelOrder(email, orderId);
-//    }
-
     // ========================
     // ADMIN: Lấy tất cả đơn hàng
     // ========================
@@ -288,19 +295,34 @@ public class OrderServiceImpl implements OrderService {
         order.setStatus(request.getStatus());
         orderRepository.save(order);
 
-        // Nếu Admin hủy đơn → hoàn lại tồn kho
+        // Nếu Admin hủy đơn → hoàn lại tồn kho (atomic)
+        Payment payment = paymentRepository.findByOrderId(orderId).orElse(null);
+
+        // Nếu Admin hủy đơn
         if (request.getStatus() == Order.OrderStatus.CANCELLED) {
+
+            // Hoàn kho
             order.getOrderItems().forEach(item -> {
                 ProductVariant variant = item.getVariant();
-                variantRepository.increaseStock(variant.getId(), item.getQuantity());
+                variantRepository.increaseStock(
+                        variant.getId(),
+                        item.getQuantity()
+                );
             });
+
+            // Đồng bộ Payment
+            if (payment != null
+                    && payment.getStatus() == Payment.PaymentStatus.PENDING) {
+                payment.setStatus(Payment.PaymentStatus.FAILED);
+                paymentRepository.save(payment);
+            }
         }
 
-        // Nếu DELIVERED → cập nhật Payment thành PAID (COD)
-        Payment payment = paymentRepository.findByOrderId(orderId).orElse(null);
+        // Nếu giao thành công và là COD
         if (payment != null
                 && request.getStatus() == Order.OrderStatus.DELIVERED
                 && payment.getMethod() == Payment.PaymentMethod.COD) {
+
             payment.setStatus(Payment.PaymentStatus.PAID);
             payment.setPaidAt(LocalDateTime.now());
             paymentRepository.save(payment);
@@ -308,12 +330,12 @@ public class OrderServiceImpl implements OrderService {
 
         notificationService.create(
                 order.getUser(),
-                "Trạng thái đơn hàng đã câập nhật",
-                "Đơn hàng" + order.getOrderCode() + " đã chuyê sang trạng thái " + request.getStatus().name() + ".",
+                "Trang thai don hang da cap nhat",
+                "Don hang " + order.getOrderCode() + " da chuyen sang trang thai " + request.getStatus().name() + ".",
                 NotificationType.ORDER_STATUS_UPDATED,
                 order.getId());
 
-        return buildOrderResponse(order, payment);
+        return buildOrderResponse(order, payment, null);
     }
 
     private void validateAdminStatusTransition(Order.OrderStatus currentStatus, Order.OrderStatus nextStatus) {
@@ -341,7 +363,6 @@ public class OrderServiceImpl implements OrderService {
         String random = String.format("%04d", new Random().nextInt(9999));
         String code = "ORD-" + date + "-" + random;
 
-        // Đảm bảo không trùng
         if (orderRepository.existsByOrderCode(code)) {
             return generateOrderCode();
         }
@@ -353,7 +374,7 @@ public class OrderServiceImpl implements OrderService {
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
     }
 
-    private OrderDto.Response buildOrderResponse(Order order, Payment payment) {
+    private OrderDto.Response buildOrderResponse(Order order, Payment payment, String paymentUrl) {
         OrderDto.Response response = orderMapper.toResponse(order);
         return OrderDto.Response.builder()
                 .id(response.getId())
@@ -371,6 +392,7 @@ public class OrderServiceImpl implements OrderService {
                 .items(response.getItems())
                 .paymentMethod(payment != null ? payment.getMethod().name() : null)
                 .paymentStatus(payment != null ? payment.getStatus().name() : null)
+                .paymentUrl(paymentUrl)
                 .build();
     }
 
@@ -380,13 +402,13 @@ public class OrderServiceImpl implements OrderService {
                 .orderCode(order.getOrderCode())
                 .status(order.getStatus())
                 .totalAmount(order.getTotalAmount())
-                .finalAmount(order.getFinalAmount())       // ← thêm
+                .finalAmount(order.getFinalAmount())
                 .totalItems(order.getOrderItems() != null ? order.getOrderItems().size() : 0)
                 .orderedAt(order.getOrderedAt())
                 .paymentMethod(payment != null ? payment.getMethod().name() : null)
                 .paymentStatus(payment != null ? payment.getStatus().name() : null)
-                .shippingName(order.getShippingName())     // ← thêm
-                .shippingPhone(order.getShippingPhone())   // ← thêm
+                .shippingName(order.getShippingName())
+                .shippingPhone(order.getShippingPhone())
                 .build();
     }
 
@@ -396,6 +418,6 @@ public class OrderServiceImpl implements OrderService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
         Payment payment = paymentRepository.findByOrderId(orderId).orElse(null);
-        return buildOrderResponse(order, payment);
+        return buildOrderResponse(order, payment, null);
     }
 }

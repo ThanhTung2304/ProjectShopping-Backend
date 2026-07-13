@@ -47,6 +47,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/test").permitAll()
                         .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
+                                .requestMatchers("/api/payment/vnpay/ipn").permitAll()
+                                .requestMatchers("/api/payment/vnpay/return").permitAll()
 
                         // Xem sản phẩm, danh mục, đánh giá không cần đăng nhập
                         .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
