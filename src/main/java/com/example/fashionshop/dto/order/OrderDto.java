@@ -20,7 +20,7 @@ public class OrderDto {
     @AllArgsConstructor
     public static class ItemResponse {
         private Long id;
-        private String productName;  // Snapshot tên lúc đặt
+        private String productName;
         private String size;
         private String color;
         private Integer quantity;
@@ -36,8 +36,8 @@ public class OrderDto {
     @AllArgsConstructor
     public static class Response {
         private Long id;
-        private String orderCode;        // ORD-20240501-001
-        private OrderStatus status;      // PENDING, CONFIRMED...
+        private String orderCode;
+        private OrderStatus status;
         private BigDecimal totalAmount;
         private BigDecimal shippingFee;
         private BigDecimal discountAmount;
@@ -47,9 +47,10 @@ public class OrderDto {
         private String shippingAddress;
         private String note;
         private LocalDateTime orderedAt;
-        private String paymentMethod;    // COD, MOMO, VNPAY...
-        private String paymentStatus;    // PENDING, PAID...
-        private List<ItemResponse> items;// Danh sách sản phẩm
+        private String paymentMethod;
+        private String paymentStatus;
+        private List<ItemResponse> items;
+        private String paymentUrl;   // ← THÊM MỚI: null nếu không phải VNPay
     }
 
     // ========================
@@ -62,31 +63,30 @@ public class OrderDto {
         private Long id;
         private String orderCode;
         private OrderStatus status;
-        private BigDecimal totalAmount;   // ← thêm
+        private BigDecimal totalAmount;
         private BigDecimal finalAmount;
         private Integer totalItems;
         private LocalDateTime orderedAt;
         private String paymentMethod;
         private String paymentStatus;
-        private String shippingName;      // ← thêm
-        private String shippingPhone;     // ← thêm
+        private String shippingName;
+        private String shippingPhone;
     }
 
     // ========================
     // REQUEST: Đặt hàng
     // ========================
-    // Client gửi lên: địa chỉ giao, phương thức thanh toán, mã giảm giá (nếu có)
     @Getter
     public static class PlaceOrderRequest {
 
         @NotNull(message = "Địa chỉ giao hàng không được để trống")
-        private Long addressId;          // Chọn từ địa chỉ đã lưu
+        private Long addressId;
 
         @NotNull(message = "Phương thức thanh toán không được để trống")
         private PaymentMethod paymentMethod;
 
-        private String couponCode;       // Mã giảm giá (không bắt buộc)
-        private String note;             // Ghi chú đơn hàng
+        private String couponCode;
+        private String note;
     }
 
     // ========================
