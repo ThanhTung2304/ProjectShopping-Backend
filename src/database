@@ -121,7 +121,7 @@ CREATE TABLE IF NOT EXISTS orders (
     id               BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id          BIGINT              NOT NULL,
     coupon_id        BIGINT              NULL,
-    order_code       VARCHAR(20)         NOT NULL UNIQUE,
+    order_code       VARCHAR(30)         NOT NULL UNIQUE,
     status           ENUM(
                          'PENDING',
                          'CONFIRMED',

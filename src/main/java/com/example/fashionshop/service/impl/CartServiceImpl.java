@@ -2,6 +2,7 @@ package com.example.fashionshop.service.impl;
 
 import com.example.fashionshop.dto.cart.CartDto;
 import com.example.fashionshop.entity.CartItem;
+import com.example.fashionshop.entity.OrderItem;
 import com.example.fashionshop.entity.ProductVariant;
 import com.example.fashionshop.entity.User;
 import com.example.fashionshop.exception.AppException;
@@ -128,6 +129,53 @@ public class CartServiceImpl implements CartService {
     public void clearCart(String email) {
         User user = findUserByEmail(email);
         cartItemRepository.deleteAllByUserId(user.getId());
+    }
+
+    // ========================
+    // Phục hồi các item từ đơn hủy/thanh toán thất bại về giỏ
+    // ========================
+    @Override
+    @Transactional
+    public void restoreOrderItems(String email, List<OrderItem> orderItems) {
+        if (orderItems == null || orderItems.isEmpty()) {
+            return;
+        }
+
+        User user = findUserByEmail(email);
+
+        for (OrderItem orderItem : orderItems) {
+            if (orderItem == null || orderItem.getVariant() == null || orderItem.getQuantity() <= 0) {
+                continue;
+            }
+
+            ProductVariant variant = orderItem.getVariant();
+            int restoreQuantity = orderItem.getQuantity();
+
+            cartItemRepository.findByUserIdAndVariantId(user.getId(), variant.getId())
+                    .ifPresentOrElse(
+                            existing -> {
+                                int mergedQuantity = existing.getQuantity() + restoreQuantity;
+                                int cappedQuantity = Math.min(mergedQuantity, variant.getStockQuantity());
+                                if (cappedQuantity > 0) {
+                                    existing.setQuantity(cappedQuantity);
+                                    cartItemRepository.save(existing);
+                                }
+                            },
+                            () -> {
+                                int cappedQuantity = Math.min(restoreQuantity, variant.getStockQuantity());
+                                if (cappedQuantity <= 0) {
+                                    return;
+                                }
+
+                                CartItem newItem = CartItem.builder()
+                                        .user(user)
+                                        .variant(variant)
+                                        .quantity(cappedQuantity)
+                                        .build();
+                                cartItemRepository.save(newItem);
+                            }
+                    );
+        }
     }
 
     // ========================

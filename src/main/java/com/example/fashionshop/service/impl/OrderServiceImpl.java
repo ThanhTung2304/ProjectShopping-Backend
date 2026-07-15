@@ -15,6 +15,7 @@ import com.example.fashionshop.service.VnPayService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -22,15 +23,21 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Random;
 import java.util.Set;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class OrderServiceImpl implements OrderService {
+
+    // Dùng chung giờ Việt Nam cho mọi mốc thời gian liên quan đến VNPay/đơn hàng
+    private static final ZoneId VIETNAM_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
+
+    private static final int MAX_ORDER_CODE_ATTEMPTS = 3;
 
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
@@ -88,10 +95,9 @@ public class OrderServiceImpl implements OrderService {
 
         BigDecimal finalAmount = totalAmount.add(shippingFee).subtract(discountAmount);
 
-        // 5. Tạo Order
+        // 5. Tạo Order (mã đơn sinh an toàn dưới tải cao, có retry khi đụng độ)
         Order order = Order.builder()
                 .user(user)
-                .orderCode(generateOrderCode())
                 .status(Order.OrderStatus.PENDING)
                 .totalAmount(totalAmount)
                 .shippingFee(shippingFee)
@@ -104,7 +110,7 @@ public class OrderServiceImpl implements OrderService {
                 .note(request.getNote())
                 .build();
 
-        orderRepository.save(order);
+        saveOrderWithUniqueCode(order);
 
         // 6. Tạo OrderItems + trừ tồn kho (atomic, chống oversell)
         for (CartItem item : cartItems) {
@@ -196,36 +202,63 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public void cancelOrder(String email, Long orderId) {
         User user = findUserByEmail(email);
-        Order order = orderRepository.findByIdAndUserId(orderId, user.getId())
-                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+
+        Order order = orderRepository.findByIdAndUserId(
+                        orderId,
+                        user.getId()
+                )
+                .orElseThrow(() ->
+                        new AppException(ErrorCode.ORDER_NOT_FOUND)
+                );
 
         if (order.getStatus() != Order.OrderStatus.PENDING
                 && order.getStatus() != Order.OrderStatus.CONFIRMED) {
             throw new AppException(ErrorCode.ORDER_CANNOT_CANCEL);
         }
 
+        // Khóa Payment trước khi thay đổi Order
+        Payment payment = paymentRepository
+                .findByOrderIdWithLock(orderId)
+                .orElse(null);
+
+        /*
+         * Không cho hủy đơn đã thanh toán VNPay.
+         * Nếu nghiệp vụ cho hủy, cần xây dựng quy trình REFUND riêng.
+         */
+        if (payment != null
+                && payment.getMethod() == Payment.PaymentMethod.VNPAY
+                && payment.getStatus() == Payment.PaymentStatus.PAID) {
+            throw new AppException(ErrorCode.ORDER_CANNOT_CANCEL);
+        }
+
         order.setStatus(Order.OrderStatus.CANCELLED);
         orderRepository.save(order);
 
-        // Đồng bộ Payment
-        Payment payment = paymentRepository.findByOrderId(orderId).orElse(null);
-        if (payment != null && payment.getStatus() == Payment.PaymentStatus.PENDING) {
+        if (payment != null
+                && payment.getStatus()
+                == Payment.PaymentStatus.PENDING) {
+
             payment.setStatus(Payment.PaymentStatus.FAILED);
             paymentRepository.save(payment);
         }
 
-        // Hoàn lại tồn kho
-        order.getOrderItems().forEach(item -> {
-            ProductVariant variant = item.getVariant();
-            variantRepository.increaseStock(variant.getId(), item.getQuantity());
-        });
+        order.getOrderItems().forEach(item ->
+                variantRepository.increaseStock(
+                        item.getVariant().getId(),
+                        item.getQuantity()
+                )
+        );
+
+        cartService.restoreOrderItems(email, order.getOrderItems());
 
         notificationService.create(
                 user,
                 "Don hang da huy",
-                "Don hang " + order.getOrderCode() + " cua ban da duoc huy.",
+                "Don hang " + order.getOrderCode()
+                        + " cua ban da duoc huy.",
                 NotificationType.ORDER_CANCELLED,
-                order.getId());
+                order.getId()
+        );
     }
 
     // ========================
@@ -235,6 +268,7 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public void confirmReceived(String email, Long orderId) {
         User user = findUserByEmail(email);
+
         Order order = orderRepository.findByIdAndUserId(orderId, user.getId())
                 .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
 
@@ -242,22 +276,30 @@ public class OrderServiceImpl implements OrderService {
             throw new AppException(ErrorCode.ORDER_INVALID_STATUS_TRANSITION);
         }
 
+        Payment payment = paymentRepository
+                .findByOrderIdWithLock(orderId)
+                .orElse(null);
+
         order.setStatus(Order.OrderStatus.DELIVERED);
         orderRepository.save(order);
 
-        Payment payment = paymentRepository.findByOrderId(orderId).orElse(null);
-        if (payment != null && payment.getMethod() == Payment.PaymentMethod.COD) {
+        if (payment != null
+                && payment.getMethod() == Payment.PaymentMethod.COD
+                && payment.getStatus() == Payment.PaymentStatus.PENDING) {
+
             payment.setStatus(Payment.PaymentStatus.PAID);
-            payment.setPaidAt(LocalDateTime.now());
+            payment.setPaidAt(LocalDateTime.now(VIETNAM_ZONE));
             paymentRepository.save(payment);
         }
 
         notificationService.create(
                 user,
                 "Da xac nhan nhan hang",
-                "Don hang " + order.getOrderCode() + " da duoc xac nhan la da giao thanh cong.",
+                "Don hang " + order.getOrderCode()
+                        + " da duoc xac nhan la da giao thanh cong.",
                 NotificationType.ORDER_DELIVERED,
-                order.getId());
+                order.getId()
+        );
     }
 
     // ========================
@@ -287,53 +329,71 @@ public class OrderServiceImpl implements OrderService {
     // ========================
     @Override
     @Transactional
-    public OrderDto.Response updateStatus(Long orderId, OrderDto.UpdateStatusRequest request) {
+    public OrderDto.Response updateStatus(
+            Long orderId,
+            OrderDto.UpdateStatusRequest request) {
+
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
-        validateAdminStatusTransition(order.getStatus(), request.getStatus());
+
+        validateAdminStatusTransition(
+                order.getStatus(),
+                request.getStatus()
+        );
+
+        Payment payment = paymentRepository
+                .findByOrderIdWithLock(orderId)
+                .orElse(null);
+
+        if (request.getStatus() == Order.OrderStatus.CANCELLED
+                && payment != null
+                && payment.getMethod() == Payment.PaymentMethod.VNPAY
+                && payment.getStatus() == Payment.PaymentStatus.PAID) {
+
+            throw new AppException(ErrorCode.ORDER_CANNOT_CANCEL);
+        }
 
         order.setStatus(request.getStatus());
         orderRepository.save(order);
 
-        // Nếu Admin hủy đơn → hoàn lại tồn kho (atomic)
-        Payment payment = paymentRepository.findByOrderId(orderId).orElse(null);
-
-        // Nếu Admin hủy đơn
         if (request.getStatus() == Order.OrderStatus.CANCELLED) {
 
-            // Hoàn kho
-            order.getOrderItems().forEach(item -> {
-                ProductVariant variant = item.getVariant();
-                variantRepository.increaseStock(
-                        variant.getId(),
-                        item.getQuantity()
-                );
-            });
-
-            // Đồng bộ Payment
             if (payment != null
                     && payment.getStatus() == Payment.PaymentStatus.PENDING) {
+
                 payment.setStatus(Payment.PaymentStatus.FAILED);
                 paymentRepository.save(payment);
             }
+
+            order.getOrderItems().forEach(item ->
+                    variantRepository.increaseStock(
+                            item.getVariant().getId(),
+                            item.getQuantity()
+                    )
+            );
+
+            cartService.restoreOrderItems(order.getUser().getEmail(), order.getOrderItems());
         }
 
-        // Nếu giao thành công và là COD
-        if (payment != null
-                && request.getStatus() == Order.OrderStatus.DELIVERED
-                && payment.getMethod() == Payment.PaymentMethod.COD) {
+        if (request.getStatus() == Order.OrderStatus.DELIVERED
+                && payment != null
+                && payment.getMethod() == Payment.PaymentMethod.COD
+                && payment.getStatus() == Payment.PaymentStatus.PENDING) {
 
             payment.setStatus(Payment.PaymentStatus.PAID);
-            payment.setPaidAt(LocalDateTime.now());
+            payment.setPaidAt(LocalDateTime.now(VIETNAM_ZONE));
             paymentRepository.save(payment);
         }
 
         notificationService.create(
                 order.getUser(),
                 "Trang thai don hang da cap nhat",
-                "Don hang " + order.getOrderCode() + " da chuyen sang trang thai " + request.getStatus().name() + ".",
+                "Don hang " + order.getOrderCode()
+                        + " da chuyen sang trang thai "
+                        + request.getStatus().name() + ".",
                 NotificationType.ORDER_STATUS_UPDATED,
-                order.getId());
+                order.getId()
+        );
 
         return buildOrderResponse(order, payment, null);
     }
@@ -358,15 +418,41 @@ public class OrderServiceImpl implements OrderService {
     // ========================
     // Helpers
     // ========================
-    private String generateOrderCode() {
-        String date = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        String random = String.format("%04d", new Random().nextInt(9999));
-        String code = "ORD-" + date + "-" + random;
 
-        if (orderRepository.existsByOrderCode(code)) {
-            return generateOrderCode();
+    /**
+     * Sinh mã đơn hàng dạng ORD-yyyyMMdd-XXXXXXXX (8 ký tự hex ngẫu nhiên).
+     * Không cần check tồn tại trước khi insert (không atomic, có race condition);
+     * thay vào đó dựa vào unique constraint của cột order_code và retry khi va chạm.
+     */
+    private String generateOrderCode() {
+        String date = LocalDateTime.now(VIETNAM_ZONE)
+                .format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String random = UUID.randomUUID().toString()
+                .replace("-", "")
+                .substring(0, 8)
+                .toUpperCase();
+        return "ORD-" + date + "-" + random;
+    }
+
+    /**
+     * Lưu Order với mã đơn duy nhất, retry tối đa MAX_ORDER_CODE_ATTEMPTS lần
+     * nếu vi phạm unique constraint (order_code trùng - cực hiếm khi dùng UUID).
+     */
+    private void saveOrderWithUniqueCode(Order order) {
+        int attempts = 0;
+        while (true) {
+            order.setOrderCode(generateOrderCode());
+            try {
+                orderRepository.save(order);
+                orderRepository.flush();
+                return;
+            } catch (DataIntegrityViolationException e) {
+                attempts++;
+                if (attempts >= MAX_ORDER_CODE_ATTEMPTS) {
+                    throw new AppException(ErrorCode.ORDER_CODE_EXISTS);
+                }
+            }
         }
-        return code;
     }
 
     private User findUserByEmail(String email) {

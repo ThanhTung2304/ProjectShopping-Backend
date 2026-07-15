@@ -71,9 +71,12 @@ public enum ErrorCode {
     COUPON_CODE_EXISTS          (HttpStatus.BAD_REQUEST,         "Mã giảm giá đã tồn tại"),
     COUPON_MIN_ORDER_NOT_MET    (HttpStatus.BAD_REQUEST,         "Đơn hàng chưa đạt giá trị tối thiểu để dùng mã"),
 
+
     // ===== COMMON =====
     VALIDATION_ERROR            (HttpStatus.BAD_REQUEST,         "Dữ liệu không hợp lệ"),
     INTERNAL_SERVER_ERROR       (HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi hệ thống, vui lòng thử lại sau");
+
+
 
     private final HttpStatus httpStatus;
     private final String message;

@@ -38,6 +38,21 @@ public class Payment {
     @Column(name = "paid_at")
     private LocalDateTime paidAt;
 
+    // ===== Các field bổ sung phục vụ đối soát / audit với VNPay =====
+
+    @Column(name = "response_code", length = 5)
+    private String responseCode;
+
+    @Column(name = "transaction_status", length = 5)
+    private String transactionStatus;
+
+    @Column(name = "bank_code", length = 20)
+    private String bankCode;
+
+    /** Thời điểm VNPay xác nhận thanh toán (vnp_PayDate), giờ Việt Nam. */
+    @Column(name = "pay_date")
+    private LocalDateTime payDate;
+
     public enum PaymentStatus {
         PENDING, PAID, FAILED, REFUNDED
     }

@@ -22,7 +22,7 @@ public class Order {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(name = "order_code", nullable = false, unique = true, length = 20)
+    @Column(name = "order_code", nullable = false, unique = true, length = 30)
     private String orderCode;
 
     @Enumerated(EnumType.STRING)

@@ -29,6 +29,7 @@ public class ProductDto {
         private List<ImageDto.Response> images;
         private Double averageRating;
         private Integer totalReviews;
+        private Integer totalStock;
 
         public BigDecimal getMinPrice() {
             if (variants == null || variants.isEmpty()) {
@@ -55,6 +56,7 @@ public class ProductDto {
         private BigDecimal maxPrice;
         private Double averageRating;
         private Integer totalReviews;
+        private Integer totalStock;
     }
 
     @Getter
