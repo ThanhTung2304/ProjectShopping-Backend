@@ -1,10 +1,7 @@
 package com.example.fashionshop.service.impl;
 
 import com.example.fashionshop.dto.cart.CartDto;
-import com.example.fashionshop.entity.CartItem;
-import com.example.fashionshop.entity.OrderItem;
-import com.example.fashionshop.entity.ProductVariant;
-import com.example.fashionshop.entity.User;
+import com.example.fashionshop.entity.*;
 import com.example.fashionshop.exception.AppException;
 import com.example.fashionshop.exception.ErrorCode;
 import com.example.fashionshop.repository.CartItemRepository;
@@ -189,10 +186,15 @@ public class CartServiceImpl implements CartService {
             BigDecimal subtotal = unitPrice.multiply(BigDecimal.valueOf(item.getQuantity()));
 
             // Lấy ảnh đại diện sản phẩm
-            String imageUrl = variant.getProduct().getImages().stream()
-                    .filter(img -> img.getIsPrimary())
-                    .map(img -> img.getImageUrl())
-                    .findFirst().orElse(null);
+            List<ProductImage> images = variant.getProduct().getImages();
+            String imageUrl = images.stream()
+                    .filter(img -> Boolean.TRUE.equals(img.getIsPrimary()))
+                    .map(ProductImage::getImageUrl)
+                    .findFirst()
+                    .orElseGet(() -> images.stream()
+                            .map(ProductImage::getImageUrl)
+                            .findFirst()
+                            .orElse(null));
 
             return CartDto.ItemResponse.builder()
                     .id(item.getId())
