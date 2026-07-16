@@ -74,6 +74,11 @@ public class ProductServiceImpl implements ProductService {
                                 .orElse(BigDecimal.ZERO);
                     }
 
+                    int totalStock = product.getVariants() == null ? 0 : product.getVariants().stream()
+                            .filter(variant -> variant.getIsActive() == null || variant.getIsActive())
+                            .mapToInt(variant -> variant.getStockQuantity() != null ? variant.getStockQuantity() : 0)
+                            .sum();
+
                     String primaryImageUrl = null;
                     if (product.getImages() != null && !product.getImages().isEmpty()) {
                         primaryImageUrl = product.getImages().stream()
@@ -94,6 +99,7 @@ public class ProductServiceImpl implements ProductService {
                             .maxPrice(max)
                             .averageRating(reviewRepository.findAverageRatingByProductId(product.getId()))
                             .totalReviews((int) reviewRepository.countByProductId(product.getId()))
+                            .totalStock(totalStock)
                             .build();
                 });
     }
@@ -315,6 +321,10 @@ public class ProductServiceImpl implements ProductService {
 
         Double avgRating = reviewRepository.findAverageRatingByProductId(product.getId());
         int totalReviews = (int) reviewRepository.countByProductId(product.getId());
+        int totalStock = product.getVariants() == null ? 0 : product.getVariants().stream()
+                .filter(variant -> variant.getIsActive() == null || variant.getIsActive())
+                .mapToInt(variant -> variant.getStockQuantity() != null ? variant.getStockQuantity() : 0)
+                .sum();
 
         return ProductDto.Response.builder()
                 .id(response.getId())
@@ -329,6 +339,7 @@ public class ProductServiceImpl implements ProductService {
                 .images(response.getImages())
                 .averageRating(avgRating != null ? avgRating : 0.0)
                 .totalReviews(totalReviews)
+                .totalStock(totalStock)
                 .build();
     }
 

@@ -47,8 +47,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/test").permitAll()
                         .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
-                                .requestMatchers("/api/payment/vnpay/ipn").permitAll()
-                                .requestMatchers("/api/payment/vnpay/return").permitAll()
+                                .requestMatchers("/api/payments/vnpay/ipn").permitAll()
+                                .requestMatchers("/api/payments/vnpay/return").permitAll()
 
                         // Xem sản phẩm, danh mục, đánh giá không cần đăng nhập
                         .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
@@ -79,6 +79,12 @@ public class SecurityConfig {
                         .hasAnyRole("CUSTOMER", "ADMIN")
 
                         .requestMatchers("/api/orders/**")
+                        .hasAnyRole("CUSTOMER", "ADMIN")
+
+                        .requestMatchers("/api/me/**")
+                        .hasAnyRole("CUSTOMER", "ADMIN")
+
+                        .requestMatchers("/api/payments/**")
                         .hasAnyRole("CUSTOMER", "ADMIN")
 
                         .requestMatchers("/api/addresses/**")

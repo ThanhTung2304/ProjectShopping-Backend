@@ -14,11 +14,16 @@ import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Service
 public class VnPayServiceImpl implements VnPayService {
+
+    // VNPay yêu cầu vnp_CreateDate / vnp_ExpireDate theo giờ GMT+7 (Việt Nam),
+    // không phụ thuộc timezone của máy chủ deploy (Railway mặc định UTC).
+    private static final ZoneId VIETNAM_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
 
     @Value("${app.vnpay.tmn-code}")
     private String tmnCode;
@@ -52,7 +57,7 @@ public class VnPayServiceImpl implements VnPayService {
         params.put("vnp_ReturnUrl", returnUrl);
         params.put("vnp_IpAddr", getClientIp(request));
 
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(VIETNAM_ZONE);
         params.put("vnp_CreateDate", now.format(FORMATTER));
         params.put("vnp_ExpireDate", now.plusMinutes(15).format(FORMATTER));
 
