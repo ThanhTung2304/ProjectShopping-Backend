@@ -40,11 +40,28 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     @Transactional
     public CategoryDto.Response createCategory(CategoryDto.Request request) {
-        if (categoryRepository.existsBySlug(request.getSlug())) {
-            throw new AppException(ErrorCode.CATEGORY_SLUG_EXISTS);
+        Category category = categoryRepository.findBySlug(request.getSlug()).orElse(null);
+
+        if (category != null) {
+            if (Boolean.TRUE.equals(category.getIsActive())) {
+                throw new AppException(ErrorCode.CATEGORY_SLUG_EXISTS);
+            }
+
+            String oldImageUrl = category.getImageUrl();
+            category.setName(request.getName());
+            category.setParent(findParent(request.getParentId()));
+            category.setImageUrl(request.getImageUrl());
+            category.setIsActive(true);
+
+            Category restoredCategory = categoryRepository.save(category);
+            if (oldImageUrl != null && !oldImageUrl.equals(restoredCategory.getImageUrl())) {
+                fileStorageService.deleteByPublicUrl(oldImageUrl);
+            }
+
+            return categoryMapper.toResponse(restoredCategory);
         }
 
-        Category category = Category.builder()
+        category = Category.builder()
                 .name(request.getName())
                 .slug(request.getSlug())
                 .parent(findParent(request.getParentId()))
