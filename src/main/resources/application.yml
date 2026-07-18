@@ -49,6 +49,12 @@ app:
     dir: uploads
     public-path: /uploads
   frontend-url: ${FRONTEND_URL:http://localhost:5173}
+  gemini:
+
+    api-key: ${GEMINI_API_KEY}
+    embedding-model: text-embedding-004
+    chat-model: gemini-2.0-flash
+
   vnpay:
     tmn-code: ${VNPAY_TMN_CODE}
     hash-secret: ${VNPAY_HASH_SECRET}
