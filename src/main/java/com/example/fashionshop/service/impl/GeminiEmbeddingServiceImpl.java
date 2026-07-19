@@ -19,19 +19,20 @@ public class GeminiEmbeddingServiceImpl implements GeminiEmbeddingService {
     @Value("${app.gemini.api-key}")
     private String apiKey;
 
-    private static final String EMBED_URL = "https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=";
+    private static final String EMBED_URL =
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=";
 
     //Nhận một đoạn văn bản và trả về vector embedding.
     @Override
     public List<Double> embedText(String text) {
         String requestBody = """
-                {
-                    "model": "models/text-embedding-004",
-                    "content": {
-                        "parts":[{"text": "%s"}]
-                    }
-                }
-                """.formatted(text.replace("\"", "\\\"").replace("\n", " "));
+    {
+      "model": "models/gemini-embedding-001",
+      "content": {
+        "parts": [{ "text": "%s" }]
+      }
+    }
+    """.formatted(text.replace("\"", "\\\"").replace("\n", " "));
 
         try{
             String respone = restClient.post()
