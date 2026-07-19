@@ -26,8 +26,13 @@ public class CorsConfig {
                         "http://127.0.0.1:5173",
                         "http://localhost:5174",
                         "http://127.0.0.1:5174",
-                        frontendUrl   // ← THÊM: domain production (đọc từ biến FRONTEND_URL trên Railway)
+                        frontendUrl
                 )
+        );
+
+        // Khớp MỌI domain Vercel sinh ra cho project này (kể cả domain preview đổi mỗi lần deploy)
+        configuration.setAllowedOriginPatterns(
+                List.of("https://project-shopping-frontend*.vercel.app")
         );
 
         configuration.setAllowedMethods(
