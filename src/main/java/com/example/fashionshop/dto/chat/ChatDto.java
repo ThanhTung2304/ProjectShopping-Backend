@@ -11,6 +11,15 @@ public class ChatDto {
     public static class Request {
         @NotBlank(message = "Nội dung tin nhắn không được để trống")
         private String message;
+
+        private  List<ChatMessage> history;
+    }
+
+    @Getter
+    @Setter
+    public static class ChatMessage {
+        private String role; // "user" hoặc "assistant"
+        private String text;
     }
 
     @Getter
