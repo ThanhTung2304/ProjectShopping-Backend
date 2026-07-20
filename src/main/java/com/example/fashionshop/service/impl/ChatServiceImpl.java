@@ -20,34 +20,32 @@ public class ChatServiceImpl implements ChatService {
 
     private static final String SYSTEM_PROMPT = """
         Bạn là trợ lý tư vấn bán hàng của shop thời trang LEANH Studio.
-        Hãy trả lời thân thiện, ngắn gọn, bằng tiếng Việt.
-        Chỉ tư vấn dựa trên thông tin sản phẩm được cung cấp bên dưới.
-        Nếu không có sản phẩm phù hợp trong danh sách, hãy nói thật là hiện chưa có sản phẩm đó,
-        đừng bịa thông tin không có trong dữ liệu.
-        
+        Hãy trả lời thân thiện, bằng tiếng Việt.
+
         CÁCH TRẢ LỜI:
-            - Đọc kỹ câu hỏi của khách, xác định CHÍNH XÁC khách đang hỏi về khía cạnh nào
-              (giá, size, màu sắc, chất liệu, cách phối đồ, tồn kho...) và trả lời thẳng vào đó trước tiên.
-            - Sau khi trả lời đúng trọng tâm, có thể bổ sung 1-2 thông tin liên quan hữu ích khác
-              (ví dụ nếu hỏi giá thì có thể nhắc thêm size/màu đang có sẵn).
-            - Nếu câu hỏi mơ hồ hoặc thiếu thông tin để trả lời chính xác, hãy hỏi lại 1 câu làm rõ
-              thay vì đoán bừa hoặc liệt kê chung chung.
-            - Câu trả lời nên đủ chi tiết (không quá ngắn cụt lủn), nhưng không lan man dài dòng.
-        
-            QUY TẮC BẮT BUỘC:
-            - CHỈ trả lời dựa trên thông tin sản phẩm được cung cấp bên dưới. Không bịa thông tin.
-            - CHỈ trả lời về (các) sản phẩm được liệt kê bên dưới, đây đã là sản phẩm phù hợp nhất
-              với câu hỏi hiện tại. KHÔNG tự ý giới thiệu thêm sản phẩm khác ngoài danh sách này,
-              trừ khi khách rõ ràng hỏi "còn gì khác", "sản phẩm khác", "so sánh"...
-            - Nếu không có sản phẩm phù hợp trong danh sách, nói thật là hiện chưa có, đừng bịa.
-            - Dựa vào lịch sử hội thoại để hiểu ngữ cảnh, không lặp lại y hệt câu đã nói trước đó.
-        
-            Sản phẩm phù hợp với câu hỏi hiện tại:
-            %s
-        
-            Lịch sử hội thoại trước đó:
-            %s
-            """;
+        - Đọc kỹ câu hỏi của khách, xác định CHÍNH XÁC khách đang hỏi về khía cạnh nào
+          (giá, size, màu sắc, chất liệu, cách phối đồ, tồn kho...) và trả lời thẳng vào đó trước tiên.
+        - Nếu khách chỉ chào hỏi xã giao (VD: "xin chào", "hi", "chào shop") mà CHƯA hỏi gì cụ thể
+          về sản phẩm, hãy chào lại thân thiện và hỏi khách cần tìm loại sản phẩm gì,
+          KHÔNG tự ý giới thiệu/liệt kê sản phẩm khi chưa được hỏi.
+        - Nếu câu hỏi mơ hồ hoặc thiếu thông tin để trả lời chính xác, hãy hỏi lại 1 câu làm rõ
+          thay vì đoán bừa hoặc liệt kê chung chung.
+        - Câu trả lời nên đủ chi tiết (không quá ngắn cụt lủn), nhưng không lan man dài dòng.
+
+        QUY TẮC BẮT BUỘC:
+        - CHỈ trả lời dựa trên thông tin sản phẩm được cung cấp bên dưới. Không bịa thông tin.
+        - CHỈ trả lời về (các) sản phẩm được liệt kê bên dưới, đây đã là sản phẩm phù hợp nhất
+          với câu hỏi hiện tại. KHÔNG tự ý giới thiệu thêm sản phẩm khác ngoài danh sách này,
+          trừ khi khách rõ ràng hỏi "còn gì khác", "sản phẩm khác", "so sánh"...
+        - Nếu không có sản phẩm phù hợp trong danh sách, nói thật là hiện chưa có, đừng bịa.
+        - Dựa vào lịch sử hội thoại để hiểu ngữ cảnh, không lặp lại y hệt câu đã nói trước đó.
+
+        Sản phẩm phù hợp với câu hỏi hiện tại:
+        %s
+
+        Lịch sử hội thoại trước đó:
+        %s
+        """;
 
     private static final List<String> PRODUCT_INTENT_KEYWORDS = List.of(
             "gợi ý", "goi y",
@@ -62,7 +60,6 @@ public class ChatServiceImpl implements ChatService {
             "cái đó", "cai do"
     );
 
-    // Từ khóa thể hiện khách MUỐN SO SÁNH / xem nhiều lựa chọn
     private static final List<String> MULTIPLE_OPTIONS_KEYWORDS = List.of(
             "khác", "khac",
             "so sánh", "so sanh",
@@ -72,24 +69,39 @@ public class ChatServiceImpl implements ChatService {
             "toàn bộ", "toan bo"
     );
 
+    // Câu chào/hỏi han xã giao thuần túy, KHÔNG mang ý định hỏi về sản phẩm
+    private static final List<String> GREETING_ONLY_PATTERNS = List.of(
+            "xin chào", "xin chao",
+            "chào bạn", "chao ban",
+            "chào shop", "chao shop",
+            "hi", "hello", "alo",
+            "shop ơi", "shop oi",
+            "cho hỏi", "cho hoi"
+    );
+
     private static final double RELEVANCE_THRESHOLD = 0.5;
 
     @Override
     public ChatDto.Response chat(String userMessage, List<ChatDto.ChatMessage> history) {
-        String searchQuery = buildSearchQuery(userMessage, history);
+        boolean isGreetingOnly = isGreetingOnly(userMessage, history);
 
-        List<VectorSearchService.ScoredProduct> allRelevant =
-                vectorSearchService.findRelevantProducts(searchQuery, 5);
+        List<VectorSearchService.ScoredProduct> contextProducts = List.of();
 
-        // Lọc theo ngưỡng liên quan trước khi làm bất cứ điều gì khác
-        List<VectorSearchService.ScoredProduct> aboveThreshold = allRelevant.stream()
-                .filter(sp -> sp.score() >= RELEVANCE_THRESHOLD)
-                .toList();
+        if (!isGreetingOnly) {
+            String searchQuery = buildSearchQuery(userMessage, history);
 
-        boolean wantsMultiple = wantsMultipleOptions(userMessage);
-        List<VectorSearchService.ScoredProduct> contextProducts = wantsMultiple
-                ? aboveThreshold.stream().limit(3).toList()
-                : aboveThreshold.stream().limit(1).toList();
+            List<VectorSearchService.ScoredProduct> allRelevant =
+                    vectorSearchService.findRelevantProducts(searchQuery, 5);
+
+            List<VectorSearchService.ScoredProduct> aboveThreshold = allRelevant.stream()
+                    .filter(sp -> sp.score() >= RELEVANCE_THRESHOLD)
+                    .toList();
+
+            boolean wantsMultiple = wantsMultipleOptions(userMessage);
+            contextProducts = wantsMultiple
+                    ? aboveThreshold.stream().limit(3).toList()
+                    : aboveThreshold.stream().limit(1).toList();
+        }
 
         String productContext = contextProducts.stream()
                 .map(sp -> "- " + sp.sourceText())
@@ -98,12 +110,11 @@ public class ChatServiceImpl implements ChatService {
         String historyContext = buildHistoryContext(history);
 
         String systemPrompt = SYSTEM_PROMPT.formatted(
-                productContext.isBlank() ? "Không có sản phẩm nào phù hợp." : productContext,
+                productContext.isBlank() ? "Chưa xác định, khách chưa hỏi cụ thể về sản phẩm nào." : productContext,
                 historyContext.isBlank() ? "Chưa có." : historyContext
         );
 
         String reply = geminiChatService.generateReply(systemPrompt, userMessage);
-
 
         List<ChatDto.SuggestedProduct> suggestions = wantsProductList(userMessage)
                 ? contextProducts.stream()
@@ -119,6 +130,29 @@ public class ChatServiceImpl implements ChatService {
                 .reply(reply)
                 .suggestedProducts(suggestions)
                 .build();
+    }
+
+    /**
+     * Câu hỏi được coi là "chỉ chào hỏi" khi:
+     * - Đây là tin nhắn ĐẦU TIÊN của cuộc trò chuyện (chưa có lịch sử), VÀ
+     * - Nội dung khớp với các mẫu chào hỏi xã giao thuần túy, VÀ
+     * - Không chứa từ khóa thể hiện ý định hỏi sản phẩm
+     */
+    private boolean isGreetingOnly(String message, List<ChatDto.ChatMessage> history) {
+        boolean isFirstMessage = history == null || history.isEmpty();
+        if (!isFirstMessage) {
+            return false; // đã có lịch sử -> không coi là chào hỏi đơn thuần nữa
+        }
+
+        String normalized = message.toLowerCase(Locale.ROOT).trim();
+
+        boolean matchesGreeting = GREETING_ONLY_PATTERNS.stream().anyMatch(normalized::contains);
+        boolean hasProductIntent = PRODUCT_INTENT_KEYWORDS.stream().anyMatch(normalized::contains);
+
+        // Câu ngắn (dưới 15 ký tự) và khớp mẫu chào -> chắc chắn chỉ là chào hỏi
+        boolean isShortAndGreeting = normalized.length() <= 15 && matchesGreeting;
+
+        return (matchesGreeting || isShortAndGreeting) && !hasProductIntent;
     }
 
     private String buildSearchQuery(String userMessage, List<ChatDto.ChatMessage> history) {
