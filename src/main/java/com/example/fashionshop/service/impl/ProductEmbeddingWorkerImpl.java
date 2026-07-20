@@ -49,6 +49,13 @@ public class ProductEmbeddingWorkerImpl implements ProductEmbeddingWorker {
         }
     }
 
+    @Override
+    @Transactional
+    public void deleteEmbeddingByProductId(Long productId) {
+        embeddingRepository.findByProductId(productId)
+                .ifPresent(embeddingRepository::delete);
+    }
+
     private String buildSourceText(Product product) {
         StringBuilder sb = new StringBuilder();
 

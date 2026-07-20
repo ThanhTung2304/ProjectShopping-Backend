@@ -1,4 +1,3 @@
-
 package com.example.fashionshop.service.impl;
 
 import com.example.fashionshop.dto.product.ImageDto;
@@ -15,12 +14,17 @@ import com.example.fashionshop.mapper.ProductMapper;
 import com.example.fashionshop.mapper.VariantMapper;
 import com.example.fashionshop.repository.*;
 import com.example.fashionshop.service.FileStorageService;
+import com.example.fashionshop.service.ProductEmbeddingWorker;
 import com.example.fashionshop.service.ProductService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
@@ -28,6 +32,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ProductServiceImpl implements ProductService {
@@ -45,6 +50,7 @@ public class ProductServiceImpl implements ProductService {
     private final VariantMapper variantMapper;
     private final ProductRepositoryCustom productRepositoryCustom;
     private final FileStorageService fileStorageService;
+    private final ProductEmbeddingWorker productEmbeddingWorker; // THÊM MỚI
 
     @Override
     @Transactional(readOnly = true)
@@ -147,7 +153,12 @@ public class ProductServiceImpl implements ProductService {
                 .isActive(request.getIsActive() != null ? request.getIsActive() : true)
                 .build();
 
-        return buildProductResponse(productRepository.save(product));
+        Product savedProduct = productRepository.save(product);
+
+        // Tự động sinh embedding ngay sau khi tạo sản phẩm, không để lỗi này làm hỏng việc tạo sản phẩm
+        safeGenerateEmbedding(savedProduct.getId());
+
+        return buildProductResponse(savedProduct);
     }
 
     @Override
@@ -174,7 +185,12 @@ public class ProductServiceImpl implements ProductService {
             product.setIsActive(request.getIsActive());
         }
 
-        return buildProductResponse(productRepository.save(product));
+        Product savedProduct = productRepository.save(product);
+
+        // Thông tin sản phẩm đã đổi -> sinh lại embedding cho khớp dữ liệu mới
+        safeGenerateEmbedding(savedProduct.getId());
+
+        return buildProductResponse(savedProduct);
     }
 
     @Override
@@ -185,6 +201,9 @@ public class ProductServiceImpl implements ProductService {
 
         product.setIsActive(false);
         productRepository.save(product);
+
+        // Sản phẩm bị vô hiệu hóa -> không cần AI gợi ý nữa, xóa embedding tương ứng
+        safeDeleteEmbedding(id);
     }
 
     @Override
@@ -280,7 +299,12 @@ public class ProductServiceImpl implements ProductService {
                 .isActive(true)
                 .build();
 
-        return variantMapper.toResponse(variantRepository.save(variant));
+        VariantDto.Response response = variantMapper.toResponse(variantRepository.save(variant));
+
+        // Variant mới ảnh hưởng tới size/màu/giá của sản phẩm -> sinh lại embedding
+        safeGenerateEmbedding(productId);
+
+        return response;
     }
 
     @Override
@@ -303,7 +327,12 @@ public class ProductServiceImpl implements ProductService {
         variant.setStockQuantity(request.getStockQuantity());
         variant.setSku(request.getSku());
 
-        return variantMapper.toResponse(variantRepository.save(variant));
+        VariantDto.Response response = variantMapper.toResponse(variantRepository.save(variant));
+
+        // Giá/tồn kho/màu thay đổi -> sinh lại embedding cho đúng dữ liệu mới
+        safeGenerateEmbedding(variant.getProduct().getId());
+
+        return response;
     }
 
     @Override
@@ -314,6 +343,9 @@ public class ProductServiceImpl implements ProductService {
 
         variant.setIsActive(false);
         variantRepository.save(variant);
+
+        // Variant bị vô hiệu hóa -> sinh lại embedding để phản ánh đúng size/màu còn lại
+        safeGenerateEmbedding(variant.getProduct().getId());
     }
 
     private ProductDto.Response buildProductResponse(Product product) {
@@ -400,5 +432,25 @@ public class ProductServiceImpl implements ProductService {
             throw new AppException(ErrorCode.VALIDATION_ERROR, "Size free size phai la FREE_SIZE hoac ONE_SIZE");
         }
         return "FREE_SIZE";
+    }
+
+    /**
+     * Sinh/cập nhật embedding cho sản phẩm, không để lỗi Gemini API (rate limit, timeout...)
+     * làm hỏng luôn thao tác chính (tạo/sửa sản phẩm vẫn phải thành công).
+     */
+    private void safeGenerateEmbedding(Long productId) {
+        try {
+            productEmbeddingWorker.generateAndSaveEmbeddingById(productId);
+        } catch (Exception e) {
+            log.error("Không thể sinh embedding cho sản phẩm ID {}: {}", productId, e.getMessage());
+        }
+    }
+
+    private void safeDeleteEmbedding(Long productId) {
+        try {
+            productEmbeddingWorker.deleteEmbeddingByProductId(productId);
+        } catch (Exception e) {
+            log.error("Không thể xóa embedding cho sản phẩm ID {}: {}", productId, e.getMessage());
+        }
     }
 }
