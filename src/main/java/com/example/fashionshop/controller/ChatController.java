@@ -15,6 +15,6 @@ public class ChatController {
 
     @PostMapping
     public ChatDto.Response chat(@Valid @RequestBody ChatDto.Request request) {
-        return chatService.chat(request.getMessage());
+        return chatService.chat(request.getMessage(), request.getHistory());
     }
 }

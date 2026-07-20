@@ -30,7 +30,7 @@ public class VectorSearchServiceImpl implements VectorSearchService {
                 .map(pe -> {
                     List<Double> productVector = parseVector(pe.getEmbeddingVector());
                     double score = cosineSimilarity(queryVector, productVector);
-                    return new ScoredProduct(pe.getProduct(), score);
+                    return new ScoredProduct(pe.getProduct(), score, pe.getSourceText());
                 })
                 .sorted(Comparator.comparingDouble(ScoredProduct::score).reversed())
                 .limit(topK)
