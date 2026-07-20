@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 @Service
@@ -33,6 +34,18 @@ public class ChatServiceImpl implements ChatService {
         %s
         """;
 
+    // Các từ khóa thể hiện khách MUỐN XEM danh sách/link sản phẩm cụ thể
+    private static final List<String> PRODUCT_INTENT_KEYWORDS = List.of(
+            "gợi ý", "goi y",
+            "sản phẩm nào", "san pham nao",
+            "cho tôi xem", "cho toi xem",
+            "có gì", "co gi",
+            "còn gì", "con gi",
+            "danh sách", "danh sach",
+            "xem sản phẩm", "xem san pham",
+            "link", "đường dẫn"
+    );
+
     @Override
     public ChatDto.Response chat(String userMessage, List<ChatDto.ChatMessage> history) {
         List<VectorSearchService.ScoredProduct> relevant =
@@ -51,13 +64,16 @@ public class ChatServiceImpl implements ChatService {
 
         String reply = geminiChatService.generateReply(systemPrompt, userMessage);
 
-        List<ChatDto.SuggestedProduct> suggestions = relevant.stream()
+        // Chỉ trả về danh sách gợi ý khi khách thực sự có ý định xem sản phẩm
+        List<ChatDto.SuggestedProduct> suggestions = wantsProductList(userMessage)
+                ? relevant.stream()
                 .map(sp -> ChatDto.SuggestedProduct.builder()
                         .id(sp.product().getId())
                         .name(sp.product().getName())
                         .slug(sp.product().getSlug())
                         .build())
-                .toList();
+                .toList()
+                : List.of();
 
         return ChatDto.Response.builder()
                 .reply(reply)
@@ -65,12 +81,16 @@ public class ChatServiceImpl implements ChatService {
                 .build();
     }
 
+    private boolean wantsProductList(String message) {
+        String normalized = message.toLowerCase(Locale.ROOT);
+        return PRODUCT_INTENT_KEYWORDS.stream().anyMatch(normalized::contains);
+    }
+
     private String buildHistoryContext(List<ChatDto.ChatMessage> history) {
         if (history == null || history.isEmpty()) {
             return "";
         }
 
-        // chỉ lấy tối đa 6 lượt gần nhất, tránh prompt quá dài
         int fromIndex = Math.max(0, history.size() - 6);
 
         return history.subList(fromIndex, history.size()).stream()
