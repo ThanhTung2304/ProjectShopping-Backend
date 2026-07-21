@@ -1,5 +1,7 @@
 package com.example.fashionshop.service;
 
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
 import com.example.fashionshop.exception.AppException;
 import com.example.fashionshop.exception.ErrorCode;
 import org.springframework.beans.factory.annotation.Value;
@@ -8,13 +10,12 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class FileStorageService {
@@ -27,14 +28,18 @@ public class FileStorageService {
             "image/gif"
     );
 
-    private final Path uploadRoot;
-    private final String publicPath;
+    // Matches .../upload/v123456/<public_id>.<ext> and captures the public_id
+    private static final Pattern CLOUDINARY_PUBLIC_ID_PATTERN =
+            Pattern.compile("/upload/(?:v\\d+/)?(.+)\\.[a-zA-Z0-9]+$");
+
+    private final Cloudinary cloudinary;
+    private final String uploadFolder;
 
     public FileStorageService(
-            @Value("${app.upload.dir:uploads}") String uploadDir,
-            @Value("${app.upload.public-path:/uploads}") String publicPath) {
-        this.uploadRoot = Paths.get(uploadDir).toAbsolutePath().normalize();
-        this.publicPath = normalizePublicPath(publicPath);
+            Cloudinary cloudinary,
+            @Value("${app.upload.folder:leanh-studio}") String uploadFolder) {
+        this.cloudinary = cloudinary;
+        this.uploadFolder = uploadFolder;
     }
 
     public String storeProductImage(MultipartFile file) {
@@ -49,49 +54,47 @@ public class FileStorageService {
         validateImage(file);
 
         String extension = getExtension(file);
-        String filename = UUID.randomUUID() + "." + extension;
-        Path imageDir = uploadRoot.resolve(folderName).normalize();
-        Path target = imageDir.resolve(filename).normalize();
-
-        if (!target.startsWith(imageDir)) {
-            throw new AppException(ErrorCode.INVALID_IMAGE_FILE);
-        }
+        String publicId = uploadFolder + "/" + folderName + "/" + UUID.randomUUID();
 
         try {
-            Files.createDirectories(imageDir);
-            Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
+            Map<?, ?> uploadResult = cloudinary.uploader().upload(
+                    file.getBytes(),
+                    ObjectUtils.asMap(
+                            "public_id", publicId,
+                            "resource_type", "image",
+                            "format", extension,
+                            "overwrite", true
+                    )
+            );
+            return (String) uploadResult.get("secure_url");
         } catch (IOException ex) {
             throw new AppException(ErrorCode.FILE_STORAGE_ERROR);
         }
-
-        return publicPath + "/" + folderName + "/" + filename;
     }
 
     public void deleteByPublicUrl(String imageUrl) {
-        if (imageUrl == null || !imageUrl.startsWith(publicPath + "/")) {
+        if (imageUrl == null || imageUrl.isBlank()) {
             return;
         }
 
-        String relativePath = imageUrl.substring((publicPath + "/").length());
-        Path target = uploadRoot.resolve(relativePath).normalize();
-
-        if (!target.startsWith(uploadRoot)) {
+        String publicId = extractPublicId(imageUrl);
+        if (publicId == null) {
             return;
         }
 
         try {
-            Files.deleteIfExists(target);
+            cloudinary.uploader().destroy(publicId, ObjectUtils.asMap("resource_type", "image"));
         } catch (IOException ignored) {
-            // Database state is the source of truth; failed file cleanup should not block deletion.
+            // Database state is the source of truth; failed remote cleanup should not block deletion.
         }
     }
 
-    public Path getUploadRoot() {
-        return uploadRoot;
-    }
-
-    public String getPublicPath() {
-        return publicPath;
+    private String extractPublicId(String imageUrl) {
+        Matcher matcher = CLOUDINARY_PUBLIC_ID_PATTERN.matcher(imageUrl);
+        if (matcher.find()) {
+            return matcher.group(1);
+        }
+        return null;
     }
 
     private void validateImage(MultipartFile file) {
@@ -117,16 +120,5 @@ public class FileStorageService {
             throw new AppException(ErrorCode.INVALID_IMAGE_FILE, "File anh phai co phan mo rong");
         }
         return originalFilename.substring(dotIndex + 1).toLowerCase(Locale.ROOT);
-    }
-
-    private String normalizePublicPath(String value) {
-        String normalized = value == null || value.isBlank() ? "/uploads" : value.trim();
-        if (!normalized.startsWith("/")) {
-            normalized = "/" + normalized;
-        }
-        if (normalized.endsWith("/")) {
-            normalized = normalized.substring(0, normalized.length() - 1);
-        }
-        return normalized;
     }
 }
