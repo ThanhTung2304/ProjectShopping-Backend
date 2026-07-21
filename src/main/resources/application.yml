@@ -46,11 +46,14 @@ app:
   order:
     shipping-fee: 30000
   upload:
-    dir: uploads
-    public-path: /uploads
+    folder: leanh-studio
   frontend-url: ${FRONTEND_URL:http://localhost:5173}
-  gemini:
+  cloudinary:
+    cloud-name: ${CLOUDINARY_CLOUD_NAME}
+    api-key: ${CLOUDINARY_API_KEY}
+    api-secret: ${CLOUDINARY_API_SECRET}
 
+  gemini:
     api-key: ${GEMINI_API_KEY}
     embedding-model: gemini-embedding-001
     chat-model: gemini-flash-lite-latest
