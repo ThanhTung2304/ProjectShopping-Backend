@@ -97,10 +97,9 @@ public class ChatServiceImpl implements ChatService {
                     .filter(sp -> sp.score() >= RELEVANCE_THRESHOLD)
                     .toList();
 
-            boolean wantsMultiple = wantsMultipleOptions(userMessage);
-            contextProducts = wantsMultiple
-                    ? aboveThreshold.stream().limit(3).toList()
-                    : aboveThreshold.stream().limit(1).toList();
+            contextProducts = aboveThreshold.stream()
+                    .limit(5)
+                    .toList();
         }
 
         String productContext = contextProducts.stream()
