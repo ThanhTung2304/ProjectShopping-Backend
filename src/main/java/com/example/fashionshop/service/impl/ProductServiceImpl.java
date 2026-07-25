@@ -3,10 +3,7 @@ package com.example.fashionshop.service.impl;
 import com.example.fashionshop.dto.product.ImageDto;
 import com.example.fashionshop.dto.product.ProductDto;
 import com.example.fashionshop.dto.product.VariantDto;
-import com.example.fashionshop.entity.Category;
-import com.example.fashionshop.entity.Product;
-import com.example.fashionshop.entity.ProductImage;
-import com.example.fashionshop.entity.ProductVariant;
+import com.example.fashionshop.entity.*;
 import com.example.fashionshop.exception.AppException;
 import com.example.fashionshop.exception.ErrorCode;
 import com.example.fashionshop.mapper.ProductImageMapper;
@@ -14,6 +11,7 @@ import com.example.fashionshop.mapper.ProductMapper;
 import com.example.fashionshop.mapper.VariantMapper;
 import com.example.fashionshop.repository.*;
 import com.example.fashionshop.service.FileStorageService;
+import com.example.fashionshop.service.NotificationService;
 import com.example.fashionshop.service.ProductEmbeddingWorker;
 import com.example.fashionshop.service.ProductService;
 import lombok.RequiredArgsConstructor;
@@ -51,6 +49,7 @@ public class ProductServiceImpl implements ProductService {
     private final ProductRepositoryCustom productRepositoryCustom;
     private final FileStorageService fileStorageService;
     private final ProductEmbeddingWorker productEmbeddingWorker; // THÊM MỚI
+    private final NotificationService notificationService;
 
     @Override
     @Transactional(readOnly = true)
@@ -158,7 +157,22 @@ public class ProductServiceImpl implements ProductService {
         // Tự động sinh embedding ngay sau khi tạo sản phẩm, không để lỗi này làm hỏng việc tạo sản phẩm
         safeGenerateEmbedding(savedProduct.getId());
 
+        safeNotifyNewProduct(savedProduct);
+
         return buildProductResponse(savedProduct);
+    }
+
+    private void safeNotifyNewProduct(Product product) {
+        try {
+            notificationService.broadcastToAllCustomers(
+                    "Sản phẩm mới",
+                    "LEANH Studio vừa ra mắt sản phẩm mới: " + product.getName() + ".",
+                    Notification.NotificationType.NEW_PRODUCT,
+                    product.getId()
+            );
+        } catch (Exception e) {
+            log.error("Không thể gửi thông báo sản phẩm mới cho ID {}: {}", product.getId(), e.getMessage());
+        }
     }
 
     @Override

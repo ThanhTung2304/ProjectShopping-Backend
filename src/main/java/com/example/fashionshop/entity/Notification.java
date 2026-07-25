@@ -53,12 +53,15 @@ public class Notification {
     }
 
     public enum NotificationType {
+        NEW_ORDER,
         ORDER_STATUS_UPDATED,
         ORDER_CANCELLED,
         ORDER_DELIVERED,
         PROFILE_UPDATED,
         PASSWORD_CHANGED,
         ACCOUNT_STATUS_UPDATED,
-        ACCOUNT_ROLE_UPDATED
+        ACCOUNT_ROLE_UPDATED,
+        PROMOTION,      // thông báo khuyến mãi thủ công
+        NEW_PRODUCT     // tự động khi có sản phẩm mới
     }
 }

@@ -12,8 +12,11 @@ import com.example.fashionshop.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -21,6 +24,7 @@ public class NotificationServiceImpl implements NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final SimpMessagingTemplate messagingTemplate; // THÊM MỚI
 
     @Override
     @Transactional
@@ -34,7 +38,24 @@ public class NotificationServiceImpl implements NotificationService {
                 .isRead(false)
                 .build();
 
-        notificationRepository.save(notification);
+        Notification saved = notificationRepository.save(notification);
+
+        pushRealtime(user, saved); // THÊM MỚI
+    }
+
+    @Override
+    @Transactional
+    public void createForUsers(List<User> users, String title, String message,
+                               NotificationType type, Long relatedId) {
+        for (User user : users) {
+            create(user, title, message, type, relatedId);
+        }
+    }
+
+    @Override
+    public void broadcastToAllCustomers(String title, String message, NotificationType type, Long relatedId) {
+        List<User> customers = userRepository.findByRole(User.Role.CUSTOMER);
+        createForUsers(customers, title, message, type, relatedId);
     }
 
     @Override
@@ -88,5 +109,18 @@ public class NotificationServiceImpl implements NotificationService {
                 .isRead(notification.getIsRead())
                 .createdAt(notification.getCreatedAt())
                 .build();
+    }
+
+    /**
+     * Đẩy thông báo real-time tới đúng user qua WebSocket.
+     * Client subscribe kênh riêng "/user/queue/notifications" (Spring tự động
+     * định tuyến theo Principal/username khi dùng convertAndSendToUser).
+     */
+    private void pushRealtime(User user, Notification notification) {
+        messagingTemplate.convertAndSendToUser(
+                user.getEmail(),               // định danh user, phải khớp Principal.getName() lúc kết nối WS
+                "/queue/notifications",
+                toResponse(notification)
+        );
     }
 }
