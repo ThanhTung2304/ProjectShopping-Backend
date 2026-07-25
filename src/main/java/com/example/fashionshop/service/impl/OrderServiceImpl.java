@@ -20,6 +20,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.example.fashionshop.entity.User.Role;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -159,7 +160,19 @@ public class OrderServiceImpl implements OrderService {
         // 9. Xóa giỏ hàng
         cartService.clearCart(email);
 
-        // 10. Nếu thanh toán VNPay, tạo payment URL
+        // 10. Thông báo cho tất cả admin có đơn hàng mới
+        List<User> admins = userRepository.findByRole(Role.ADMIN);
+        if (!admins.isEmpty()) {
+            notificationService.createForUsers(
+                    admins,
+                    "Đơn hàng mới",
+                    "Khách hàng " + user.getFullName() + " vừa đặt đơn hàng " + order.getOrderCode()
+                            + " trị giá " + finalAmount + " VNĐ.",
+                    NotificationType.NEW_ORDER,
+                    order.getId()
+            );
+        }
+        // 11. Nếu thanh toán VNPay, tạo payment URL
         String paymentUrl = null;
         if (request.getPaymentMethod() == Payment.PaymentMethod.VNPAY) {
             paymentUrl = vnPayService.createPaymentUrl(order, httpRequest);
@@ -253,12 +266,23 @@ public class OrderServiceImpl implements OrderService {
 
         notificationService.create(
                 user,
-                "Don hang da huy",
-                "Don hang " + order.getOrderCode()
-                        + " cua ban da duoc huy.",
+                "Đơn hàng đã hủy",
+                "Đơn hàng" + order.getOrderCode()
+                        + " của bạn đã ợc hủy.",
                 NotificationType.ORDER_CANCELLED,
                 order.getId()
         );
+        // THÊM MỚI: báo cho tất cả admin biết khách đã tự hủy đơn
+        List<User> admins = userRepository.findByRole(Role.ADMIN);
+        if (!admins.isEmpty()) {
+            notificationService.createForUsers(
+                    admins,
+                    "Khách đã hủy đơn hàng",
+                    "Khách hàng " + user.getFullName() + " đã hủy đơn hàng " + order.getOrderCode() + ".",
+                    NotificationType.ORDER_CANCELLED,
+                    order.getId()
+            );
+        }
     }
 
     // ========================
@@ -294,12 +318,23 @@ public class OrderServiceImpl implements OrderService {
 
         notificationService.create(
                 user,
-                "Da xac nhan nhan hang",
-                "Don hang " + order.getOrderCode()
-                        + " da duoc xac nhan la da giao thanh cong.",
+                "Đã xác nhận nhận hàng",
+                "Đơn hàng " + order.getOrderCode()
+                        + " đã được xác nhận là đã giao thành công.",
                 NotificationType.ORDER_DELIVERED,
                 order.getId()
         );
+        // THÊM MỚI: báo cho tất cả admin biết khách đã xác nhận nhận hàng
+        List<User> admins = userRepository.findByRole(Role.ADMIN);
+        if (!admins.isEmpty()) {
+            notificationService.createForUsers(
+                    admins,
+                    "Khách đã xác nhận hàng",
+                    "Khách hàng " + user.getFullName() + " đã xác nhận đã nhận đơn hàng " + order.getOrderCode() + ".",
+                    NotificationType.ORDER_DELIVERED,
+                    order.getId()
+            );
+        }
     }
 
     // ========================
@@ -387,9 +422,9 @@ public class OrderServiceImpl implements OrderService {
 
         notificationService.create(
                 order.getUser(),
-                "Trang thai don hang da cap nhat",
-                "Don hang " + order.getOrderCode()
-                        + " da chuyen sang trang thai "
+                "Trạng thái đơn hàng đã được cập nhật",
+                "Đơn hàng " + order.getOrderCode()
+                        + " đã chuyển sang trạng thái "
                         + request.getStatus().name() + ".",
                 NotificationType.ORDER_STATUS_UPDATED,
                 order.getId()
