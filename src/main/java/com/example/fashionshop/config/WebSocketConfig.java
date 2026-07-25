@@ -1,19 +1,19 @@
 package com.example.fashionshop.config;
 
+import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 
+@Configuration
+@EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
-        // Kênh server gửi tới client, prefix "/topic" (broadcast) và "/user" (gửi riêng 1 người)
         registry.enableSimpleBroker("/topic", "/queue");
-        // Prefix client dùng khi gửi lên server (không dùng trong tính năng này nhưng khai báo cho đầy đủ)
         registry.setApplicationDestinationPrefixes("/app");
-        // Prefix cho tin nhắn gửi RIÊNG tới 1 user cụ thể
         registry.setUserDestinationPrefix("/user");
     }
 
