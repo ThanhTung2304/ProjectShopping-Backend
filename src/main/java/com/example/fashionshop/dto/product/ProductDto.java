@@ -79,6 +79,6 @@ public class ProductDto {
 
         private Boolean isActive = true;
 
-        private Boolean isFeatured = true;
+        private Boolean isFeatured = false;
     }
 }

@@ -205,6 +205,7 @@ public class ProductServiceImpl implements ProductService {
                 .category(category)
                 .sizeType(resolveSizeType(request.getSizeType()))
                 .isActive(request.getIsActive() != null ? request.getIsActive() : true)
+                .isFeatured(request.getIsFeatured() != null ? request.getIsFeatured() : false)
                 .build();
 
         Product savedProduct = productRepository.save(product);
@@ -252,6 +253,10 @@ public class ProductServiceImpl implements ProductService {
 
         if (request.getIsActive() != null) {
             product.setIsActive(request.getIsActive());
+        }
+
+        if (request.getIsFeatured() != null) {
+            product.setIsFeatured(request.getIsFeatured());
         }
 
         Product savedProduct = productRepository.save(product);
