@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -23,6 +24,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     // Tìm kiếm sản phẩm theo tên
     Page<Product> findByNameContainingIgnoreCaseAndIsActiveTrue(String name, Pageable pageable);
+
+    List<Product> findByIsActiveTrueAndIsFeaturedTrue();
 
     // Tìm kiếm sản phẩm theo tên + danh mục
     @EntityGraph(attributePaths = {"category"})
