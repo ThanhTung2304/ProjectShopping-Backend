@@ -1,11 +1,3 @@
-/**
- * quan trọng nhất
- * cấu hình security
- * mở endpoint public
- * chặn endpoint private
- * add JWT filter
- */
-
 package com.example.fashionshop.config;
 
 import lombok.RequiredArgsConstructor;
@@ -28,7 +20,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity   // Cho phép dùng @PreAuthorize trên method
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -39,42 +31,33 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .cors(cors -> {})
-                .csrf(AbstractHttpConfigurer::disable)  // REST API không cần CSRF
-                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // Không dùng session
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
 
-                        // ===== PUBLIC =====
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/test").permitAll()
                         .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
-                                .requestMatchers("/api/payments/vnpay/ipn").permitAll()
-                                .requestMatchers("/api/payments/vnpay/return").permitAll()
-                                .requestMatchers("/api/chat/**").permitAll()
+                        .requestMatchers("/api/payments/vnpay/ipn").permitAll()
+                        .requestMatchers("/api/payments/vnpay/return").permitAll()
+                        .requestMatchers("/api/chat/**").permitAll()
+                        .requestMatchers("/ws/**").permitAll()
 
-                        // Xem sản phẩm, danh mục, đánh giá không cần đăng nhập
                         .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/reviews/**").permitAll()
-                                .requestMatchers(HttpMethod.GET, "/api/coupons/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/coupons/**").permitAll()
 
-                                // ===== ADMIN =====
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
                         .requestMatchers(HttpMethod.POST, "/api/products/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/products/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/products/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/products/**").hasRole("ADMIN")
 
                         .requestMatchers(HttpMethod.POST, "/api/categories/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/categories/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/categories/**").hasRole("ADMIN")
-
-                        // ===== CUSTOMER =====
-//                        .requestMatchers("/api/cart/**").hasRole("CUSTOMER")
-//                        .requestMatchers("/api/orders/**").authenticated()
-//                        .requestMatchers("/api/addresses/**").authenticated()
-//                        .requestMatchers("/api/reviews/**").authenticated()
-//                        .requestMatchers("/api/users/**").authenticated()
-
 
                         .requestMatchers("/api/cart/**")
                         .hasAnyRole("CUSTOMER", "ADMIN")
@@ -99,7 +82,6 @@ public class SecurityConfig {
 
                         .anyRequest().authenticated()
                 )
-                // Thêm JwtAuthFilter trước filter mặc định của Spring
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

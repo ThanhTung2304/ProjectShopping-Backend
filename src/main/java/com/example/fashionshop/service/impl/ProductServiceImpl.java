@@ -110,6 +110,61 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    public List<ProductDto.Summary> getFeaturedProducts() {
+        return productRepository.findByIsActiveTrueAndIsFeaturedTrue().stream()
+                .map(this::mapToSummaryWithDetails)
+                .toList();
+    }
+
+    private ProductDto.Summary mapToSummaryWithDetails(Product product) {
+        ProductDto.Summary summary = productMapper.toSummary(product);
+
+        BigDecimal min = BigDecimal.ZERO;
+        BigDecimal max = BigDecimal.ZERO;
+
+        if (product.getVariants() != null && !product.getVariants().isEmpty()) {
+            min = product.getVariants().stream()
+                    .map(v -> v.getSalePrice() != null ? v.getSalePrice() : v.getPrice())
+                    .min(BigDecimal::compareTo)
+                    .orElse(BigDecimal.ZERO);
+
+            max = product.getVariants().stream()
+                    .map(ProductVariant::getPrice)
+                    .max(BigDecimal::compareTo)
+                    .orElse(BigDecimal.ZERO);
+        }
+
+        int totalStock = product.getVariants() == null ? 0 : product.getVariants().stream()
+                .filter(variant -> variant.getIsActive() == null || variant.getIsActive())
+                .mapToInt(variant -> variant.getStockQuantity() != null ? variant.getStockQuantity() : 0)
+                .sum();
+
+        String primaryImageUrl = null;
+        if (product.getImages() != null && !product.getImages().isEmpty()) {
+            primaryImageUrl = product.getImages().stream()
+                    .filter(ProductImage::getIsPrimary)
+                    .map(ProductImage::getImageUrl)
+                    .findFirst()
+                    .orElse(null);
+        }
+
+        return ProductDto.Summary.builder()
+                .id(summary.getId())
+                .name(summary.getName())
+                .slug(summary.getSlug())
+                .categoryName(summary.getCategoryName())
+                .sizeType(summary.getSizeType())
+                .primaryImageUrl(primaryImageUrl)
+                .minPrice(min)
+                .maxPrice(max)
+                .averageRating(reviewRepository.findAverageRatingByProductId(product.getId()))
+                .totalReviews((int) reviewRepository.countByProductId(product.getId()))
+                .totalStock(totalStock)
+                .isFeatured(product.getIsFeatured())
+                .build();
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public ProductDto.Response getProductBySlug(String slug) {
         Product product = productRepository.findBySlug(slug)
@@ -205,6 +260,18 @@ public class ProductServiceImpl implements ProductService {
         safeGenerateEmbedding(savedProduct.getId());
 
         return buildProductResponse(savedProduct);
+    }
+
+    @Override
+    @Transactional
+    public ProductDto.Response toggleFeatured(Long id, Boolean featured) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
+
+        product.setIsFeatured(featured);
+        Product saved = productRepository.save(product);
+
+        return buildProductResponse(saved);
     }
 
     @Override

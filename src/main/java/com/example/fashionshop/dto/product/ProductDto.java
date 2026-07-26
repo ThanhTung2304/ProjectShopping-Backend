@@ -24,6 +24,7 @@ public class ProductDto {
         private String categoryName;
         private Product.SizeType sizeType;
         private Boolean isActive;
+        private Boolean isFeatured;
         private LocalDateTime createdAt;
         private List<VariantDto.Response> variants;
         private List<ImageDto.Response> images;
@@ -57,6 +58,7 @@ public class ProductDto {
         private Double averageRating;
         private Integer totalReviews;
         private Integer totalStock;
+        private Boolean isFeatured;
     }
 
     @Getter
@@ -76,5 +78,7 @@ public class ProductDto {
         private Product.SizeType sizeType = Product.SizeType.CLOTHING;
 
         private Boolean isActive = true;
+
+        private Boolean isFeatured = true;
     }
 }

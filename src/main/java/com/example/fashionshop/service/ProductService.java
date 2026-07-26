@@ -15,12 +15,16 @@ public interface ProductService {
     Page<ProductDto.Summary> getProducts(String keyword, Long categoryId,
                                          BigDecimal minPrice, BigDecimal maxPrice,
                                          String size, String color, Pageable pageable);
+
+    List<ProductDto.Summary> getFeaturedProducts();
+
     ProductDto.Response getProductBySlug(String slug);
     ProductDto.Response getProductById(Long id);
 
     // ===== ADMIN =====
     ProductDto.Response createProduct(ProductDto.Request request);
     ProductDto.Response updateProduct(Long id, ProductDto.Request request);
+    ProductDto.Response toggleFeatured(Long id, Boolean featured);
     void deleteProduct(Long id);
 
     // ===== Product images =====

@@ -24,7 +24,6 @@ public class ProductController {
 
     private final ProductService productService;
 
-    // GET /api/products
     @GetMapping
     public ResponseEntity<ApiResponse<Page<ProductDto.Summary>>> getProducts(
             @RequestParam(required = false) String keyword,
@@ -38,21 +37,23 @@ public class ProductController {
                 productService.getProducts(keyword, categoryId, minPrice, maxPrice, size, color, pageable)));
     }
 
-    // GET /api/products/{slug}
+    @GetMapping("/featured")
+    public ResponseEntity<ApiResponse<List<ProductDto.Summary>>> getFeaturedProducts() {
+        return ResponseEntity.ok(ApiResponse.success(productService.getFeaturedProducts()));
+    }
+
     @GetMapping("/{slug}")
     public ResponseEntity<ApiResponse<ProductDto.Response>> getProductBySlug(
             @PathVariable String slug) {
         return ResponseEntity.ok(ApiResponse.success(productService.getProductBySlug(slug)));
     }
 
-    // GET /api/products/id/{id}
     @GetMapping("/id/{id}")
     public ResponseEntity<ApiResponse<ProductDto.Response>> getProductById(
             @PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.success(productService.getProductById(id)));
     }
 
-    // POST /api/products — ADMIN only
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<ProductDto.Response>> createProduct(
@@ -62,7 +63,6 @@ public class ProductController {
                         productService.createProduct(request)));
     }
 
-    // PUT /api/products/{id} — ADMIN only
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<ProductDto.Response>> updateProduct(
@@ -72,7 +72,15 @@ public class ProductController {
                 productService.updateProduct(id, request)));
     }
 
-    // DELETE /api/products/{id} — ADMIN only
+    @PatchMapping("/{id}/featured")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<ProductDto.Response>> toggleFeatured(
+            @PathVariable Long id,
+            @RequestParam Boolean featured) {
+        return ResponseEntity.ok(ApiResponse.success("Cập nhật sản phẩm nổi bật thành công",
+                productService.toggleFeatured(id, featured)));
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> deleteProduct(@PathVariable Long id) {
@@ -80,9 +88,6 @@ public class ProductController {
         return ResponseEntity.ok(ApiResponse.ok("Xóa sản phẩm thành công"));
     }
 
-    // ===== VARIANT =====
-
-    // GET /api/products/{productId}/variants — public
     @GetMapping("/{productId}/variants")
     public ResponseEntity<ApiResponse<List<VariantDto.Response>>> getVariantsByProduct(
             @PathVariable Long productId) {
@@ -90,7 +95,6 @@ public class ProductController {
                 productService.getVariantsByProductId(productId)));
     }
 
-    // POST /api/products/id/{productId}/variants — ADMIN only
     @PostMapping("/id/{productId}/variants")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<VariantDto.Response>> addVariant(
@@ -101,7 +105,6 @@ public class ProductController {
                         productService.addVariant(productId, request)));
     }
 
-    // PUT /api/products/variants/{variantId} — ADMIN only
     @PutMapping("/variants/{variantId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<VariantDto.Response>> updateVariant(
@@ -111,7 +114,6 @@ public class ProductController {
                 productService.updateVariant(variantId, request)));
     }
 
-    // DELETE /api/products/variants/{variantId} — ADMIN only
     @DeleteMapping("/variants/{variantId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> deleteVariant(@PathVariable Long variantId) {
@@ -119,7 +121,6 @@ public class ProductController {
         return ResponseEntity.ok(ApiResponse.ok("Xóa biến thể thành công"));
     }
 
-    // GET /api/products/id/{productId}/variants
     @GetMapping("/id/{productId}/variants")
     public ResponseEntity<ApiResponse<List<VariantDto.Response>>> getVariantsByProductIdPath(
             @PathVariable Long productId) {
