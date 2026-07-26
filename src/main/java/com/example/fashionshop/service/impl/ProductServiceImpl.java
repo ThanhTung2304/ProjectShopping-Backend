@@ -90,7 +90,10 @@ public class ProductServiceImpl implements ProductService {
                                 .filter(ProductImage::getIsPrimary)
                                 .map(ProductImage::getImageUrl)
                                 .findFirst()
-                                .orElse(null);
+                                .orElseGet(() -> product.getImages().stream()
+                                        .map(ProductImage::getImageUrl)
+                                        .findFirst()
+                                        .orElse(null));
                     }
 
                     return ProductDto.Summary.builder()
@@ -453,6 +456,7 @@ public class ProductServiceImpl implements ProductService {
                 .categoryName(response.getCategoryName())
                 .sizeType(response.getSizeType())
                 .isActive(response.getIsActive())
+                .isFeatured(product.getIsFeatured())
                 .createdAt(response.getCreatedAt())
                 .variants(response.getVariants())
                 .images(response.getImages())
