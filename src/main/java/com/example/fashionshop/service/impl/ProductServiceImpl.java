@@ -110,6 +110,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ProductDto.Summary> getFeaturedProducts() {
         return productRepository.findByIsActiveTrueAndIsFeaturedTrue().stream()
                 .map(this::mapToSummaryWithDetails)
