@@ -149,7 +149,10 @@ public class ProductServiceImpl implements ProductService {
                     .filter(ProductImage::getIsPrimary)
                     .map(ProductImage::getImageUrl)
                     .findFirst()
-                    .orElse(null);
+                    .orElseGet(() -> product.getImages().stream()   // THÊM: fallback lấy ảnh đầu tiên
+                            .map(ProductImage::getImageUrl)
+                            .findFirst()
+                            .orElse(null));
         }
 
         return ProductDto.Summary.builder()
