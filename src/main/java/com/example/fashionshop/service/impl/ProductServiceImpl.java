@@ -312,18 +312,31 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
-    public ImageDto.Response addProductImage(Long productId, MultipartFile file, Boolean isPrimary, Integer sortOrder) {
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
+    public ImageDto.Response addProductImage(
+            Long productId,
+            MultipartFile file,
+            Boolean isPrimary,
+            Integer sortOrder) {
 
-        boolean shouldBePrimary = Boolean.TRUE.equals(isPrimary)
-                || productImageRepository.findByProductIdAndIsPrimaryTrue(productId).isEmpty();
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() ->
+                        new AppException(ErrorCode.PRODUCT_NOT_FOUND));
+
+        String imageUrl = fileStorageService.storeProductImage(file);
+
+        boolean hasPrimaryImage =
+                productImageRepository
+                        .findByProductIdAndIsPrimaryTrue(productId)
+                        .isPresent();
+
+        boolean shouldBePrimary =
+                Boolean.TRUE.equals(isPrimary) || !hasPrimaryImage;
 
         if (shouldBePrimary) {
             productImageRepository.clearPrimaryByProductId(productId);
+            productImageRepository.flush();
         }
 
-        String imageUrl = fileStorageService.storeProductImage(file);
         ProductImage image = ProductImage.builder()
                 .product(product)
                 .imageUrl(imageUrl)
@@ -331,7 +344,9 @@ public class ProductServiceImpl implements ProductService {
                 .sortOrder(sortOrder != null ? sortOrder : 0)
                 .build();
 
-        return productImageMapper.toResponse(productImageRepository.save(image));
+        ProductImage savedImage = productImageRepository.saveAndFlush(image);
+
+        return productImageMapper.toResponse(savedImage);
     }
 
     @Override
