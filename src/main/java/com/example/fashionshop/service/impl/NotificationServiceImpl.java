@@ -7,10 +7,13 @@ import com.example.fashionshop.entity.User;
 import com.example.fashionshop.exception.AppException;
 import com.example.fashionshop.exception.ErrorCode;
 import com.example.fashionshop.repository.NotificationRepository;
+import com.example.fashionshop.repository.ProductRepository;
+import com.example.fashionshop.entity.Product;
 import com.example.fashionshop.repository.UserRepository;
 import com.example.fashionshop.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -24,7 +27,8 @@ public class NotificationServiceImpl implements NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
-    private final SimpMessagingTemplate messagingTemplate; // THÊM MỚI
+    private final SimpMessagingTemplate messagingTemplate;
+    private final ProductRepository productRepository;
 
     @Override
     @Transactional
@@ -61,9 +65,23 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     @Transactional(readOnly = true)
     public Page<NotificationDto.Response> getMyNotifications(String email, Pageable pageable) {
+
         User user = findUserByEmail(email);
-        return notificationRepository.findByUserId(user.getId(), pageable)
-                .map(this::toResponse);
+
+        Page<Notification> page =
+                notificationRepository.findByUserId(user.getId(), pageable);
+
+        List<NotificationDto.Response> responses = page.getContent()
+                .stream()
+                .filter(this::shouldDisplayNotification)
+                .map(this::toResponse)
+                .toList();
+
+        return new PageImpl<>(
+                responses,
+                pageable,
+                responses.size()
+        );
     }
 
     @Override
@@ -109,6 +127,21 @@ public class NotificationServiceImpl implements NotificationService {
                 .isRead(notification.getIsRead())
                 .createdAt(notification.getCreatedAt())
                 .build();
+    }
+
+    private boolean shouldDisplayNotification(Notification notification) {
+
+        if (notification.getType() != Notification.NotificationType.NEW_PRODUCT) {
+            return true;
+        }
+
+        if (notification.getRelatedId() == null) {
+            return false;
+        }
+
+        return productRepository.findById(notification.getRelatedId())
+                .map(Product::getIsActive)
+                .orElse(false);
     }
 
     /**

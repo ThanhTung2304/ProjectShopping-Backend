@@ -59,6 +59,7 @@ public class ProductServiceImpl implements ProductService {
     private final FileStorageService fileStorageService;
     private final ProductEmbeddingWorker productEmbeddingWorker; // THÊM MỚI
     private final NotificationService notificationService;
+    private final NotificationRepository notificationRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -305,6 +306,12 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
 
         product.setIsActive(false);
+
+        notificationRepository.deleteByTypeAndRelatedId(
+                Notification.NotificationType.NEW_PRODUCT,
+                product.getId()
+        );
+
         productRepository.save(product);
 
         // Sản phẩm bị vô hiệu hóa -> không cần AI gợi ý nữa, xóa embedding tương ứng
