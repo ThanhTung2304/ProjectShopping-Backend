@@ -450,14 +450,44 @@ public class ProductServiceImpl implements ProductService {
 
     private String generateVariantSku(Product product) {
 
-        Integer maxSequence =
-                variantRepository.findMaxSkuSequenceByProductId(product.getId());
+        String productCode = product.getProductCode();
 
-        int nextSequence = (maxSequence == null ? 1 : maxSequence + 1);
+        if (productCode == null || productCode.isBlank()) {
+            throw new AppException(
+                    ErrorCode.VALIDATION_ERROR,
+                    "Sản phẩm chưa có mã productCode"
+            );
+        }
 
-        return product.getProductCode()
-                + "-"
-                + String.format("%03d", nextSequence);
+        int nextSequence = variantRepository
+                .findTopByProductIdOrderBySkuDesc(product.getId())
+                .map(ProductVariant::getSku)
+                .map(this::extractSkuSequence)
+                .orElse(0) + 1;
+
+        return productCode + "-" + String.format("%03d", nextSequence);
+    }
+
+    private int extractSkuSequence(String sku) {
+
+        if (sku == null || sku.isBlank()) {
+            return 0;
+        }
+
+        int separatorIndex = sku.lastIndexOf('-');
+
+        if (separatorIndex < 0 || separatorIndex == sku.length() - 1) {
+            return 0;
+        }
+
+        String sequencePart = sku.substring(separatorIndex + 1);
+
+        try {
+            return Integer.parseInt(sequencePart);
+        } catch (NumberFormatException e) {
+            log.warn("SKU không đúng định dạng, bỏ qua sequence: {}", sku);
+            return 0;
+        }
     }
 
     private String normalizeSkuPart(String value) {
