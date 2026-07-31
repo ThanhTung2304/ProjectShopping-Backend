@@ -11,7 +11,8 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface ProductVariantRepository extends JpaRepository<ProductVariant, Long> {
+public interface ProductVariantRepository
+        extends JpaRepository<ProductVariant, Long> {
 
     List<ProductVariant> findByProductIdAndIsActiveTrue(Long productId);
 
@@ -21,22 +22,57 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
 
     boolean existsBySkuAndIdNot(String sku, Long id);
 
-    //Tìm variant theo product + size + color
-    Optional<ProductVariant> findByProductIdAndSizeAndColor(Long productId, String size, String color);
+    /**
+     * Kiểm tra một sản phẩm đã có biến thể với cùng size và màu hay chưa.
+     * IgnoreCase giúp "Đen" và "đen" được coi là cùng một màu.
+     */
+    boolean existsByProductIdAndSizeIgnoreCaseAndColorIgnoreCase(
+            Long productId,
+            String size,
+            String color
+    );
+
+    /**
+     * Dùng khi cập nhật biến thể.
+     * Bỏ qua chính biến thể đang được sửa.
+     */
+    boolean existsByProductIdAndSizeIgnoreCaseAndColorIgnoreCaseAndIdNot(
+            Long productId,
+            String size,
+            String color,
+            Long id
+    );
+
+    Optional<ProductVariant> findByProductIdAndSizeAndColor(
+            Long productId,
+            String size,
+            String color
+    );
 
     List<ProductVariant> findByProductId(Long productId);
 
-    // ========================
     // Trừ tồn kho có điều kiện — atomic, chống oversell
-    // ========================
     @Modifying
-    @Query("UPDATE ProductVariant pv SET pv.stockQuantity = pv.stockQuantity - :quantity WHERE pv.id = :variantId AND pv.stockQuantity >= :quantity")
-    int decreaseStock(@Param("variantId") Long variantId, @Param("quantity") int quantity);
+    @Query("""
+            UPDATE ProductVariant pv
+            SET pv.stockQuantity = pv.stockQuantity - :quantity
+            WHERE pv.id = :variantId
+              AND pv.stockQuantity >= :quantity
+            """)
+    int decreaseStock(
+            @Param("variantId") Long variantId,
+            @Param("quantity") int quantity
+    );
 
-    // ========================
-    // Hoàn lại tồn kho (khi hủy đơn) — atomic
-    // ========================
+    // Hoàn lại tồn kho khi hủy đơn
     @Modifying
-    @Query("UPDATE ProductVariant pv SET pv.stockQuantity = pv.stockQuantity + :quantity WHERE pv.id = :variantId")
-    void increaseStock(@Param("variantId") Long variantId, @Param("quantity") int quantity);
+    @Query("""
+            UPDATE ProductVariant pv
+            SET pv.stockQuantity = pv.stockQuantity + :quantity
+            WHERE pv.id = :variantId
+            """)
+    void increaseStock(
+            @Param("variantId") Long variantId,
+            @Param("quantity") int quantity
+    );
 }

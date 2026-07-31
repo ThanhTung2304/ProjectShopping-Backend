@@ -26,6 +26,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
+import java.text.Normalizer;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -312,31 +313,18 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
-    public ImageDto.Response addProductImage(
-            Long productId,
-            MultipartFile file,
-            Boolean isPrimary,
-            Integer sortOrder) {
-
+    public ImageDto.Response addProductImage(Long productId, MultipartFile file, Boolean isPrimary, Integer sortOrder) {
         Product product = productRepository.findById(productId)
-                .orElseThrow(() ->
-                        new AppException(ErrorCode.PRODUCT_NOT_FOUND));
+                .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
 
-        String imageUrl = fileStorageService.storeProductImage(file);
-
-        boolean hasPrimaryImage =
-                productImageRepository
-                        .findByProductIdAndIsPrimaryTrue(productId)
-                        .isPresent();
-
-        boolean shouldBePrimary =
-                Boolean.TRUE.equals(isPrimary) || !hasPrimaryImage;
+        boolean shouldBePrimary = Boolean.TRUE.equals(isPrimary)
+                || productImageRepository.findByProductIdAndIsPrimaryTrue(productId).isEmpty();
 
         if (shouldBePrimary) {
             productImageRepository.clearPrimaryByProductId(productId);
-            productImageRepository.flush();
         }
 
+        String imageUrl = fileStorageService.storeProductImage(file);
         ProductImage image = ProductImage.builder()
                 .product(product)
                 .imageUrl(imageUrl)
@@ -344,9 +332,7 @@ public class ProductServiceImpl implements ProductService {
                 .sortOrder(sortOrder != null ? sortOrder : 0)
                 .build();
 
-        ProductImage savedImage = productImageRepository.saveAndFlush(image);
-
-        return productImageMapper.toResponse(savedImage);
+        return productImageMapper.toResponse(productImageRepository.save(image));
     }
 
     @Override
@@ -390,20 +376,27 @@ public class ProductServiceImpl implements ProductService {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
 
-        if (variantRepository.existsBySku(request.getSku())) {
-            throw new AppException(ErrorCode.VARIANT_SKU_EXISTS);
+        String normalizedSize = normalizeAndValidateSize(product, request.getSize());
+        String normalizedColor = request.getColor().trim();
+
+        if (variantRepository.existsByProductIdAndSizeIgnoreCaseAndColorIgnoreCase(
+                productId, normalizedSize, normalizedColor)) {
+            throw new AppException(ErrorCode.VARIANT_ALREADY_EXISTS);
         }
 
-        String normalizedSize = normalizeAndValidateSize(product, request.getSize());
+        String generatedSku = generateVariantSku(product.getId(), normalizedSize, normalizedColor);
+        if (variantRepository.existsBySku(generatedSku)) {
+            throw new AppException(ErrorCode.VARIANT_SKU_EXISTS);
+        }
 
         ProductVariant variant = ProductVariant.builder()
                 .product(product)
                 .size(normalizedSize)
-                .color(request.getColor())
+                .color(normalizedColor)
                 .price(request.getPrice())
                 .salePrice(request.getSalePrice())
                 .stockQuantity(request.getStockQuantity())
-                .sku(request.getSku())
+                .sku(generatedSku)
                 .isActive(true)
                 .build();
 
@@ -421,19 +414,27 @@ public class ProductServiceImpl implements ProductService {
         ProductVariant variant = variantRepository.findById(variantId)
                 .orElseThrow(() -> new AppException(ErrorCode.VARIANT_NOT_FOUND));
 
-        if (!variant.getSku().equals(request.getSku())
-                && variantRepository.existsBySku(request.getSku())) {
+        String normalizedSize = normalizeAndValidateSize(variant.getProduct(), request.getSize());
+        String normalizedColor = request.getColor().trim();
+        Long productId = variant.getProduct().getId();
+
+        if (variantRepository.existsByProductIdAndSizeIgnoreCaseAndColorIgnoreCaseAndIdNot(
+                productId, normalizedSize, normalizedColor, variantId)) {
+            throw new AppException(ErrorCode.VARIANT_ALREADY_EXISTS);
+        }
+
+        String generatedSku = generateVariantSku(productId, normalizedSize, normalizedColor);
+        if (!generatedSku.equals(variant.getSku())
+                && variantRepository.existsBySkuAndIdNot(generatedSku, variantId)) {
             throw new AppException(ErrorCode.VARIANT_SKU_EXISTS);
         }
 
-        String normalizedSize = normalizeAndValidateSize(variant.getProduct(), request.getSize());
-
         variant.setSize(normalizedSize);
-        variant.setColor(request.getColor());
+        variant.setColor(normalizedColor);
         variant.setPrice(request.getPrice());
         variant.setSalePrice(request.getSalePrice());
         variant.setStockQuantity(request.getStockQuantity());
-        variant.setSku(request.getSku());
+        variant.setSku(generatedSku);
 
         VariantDto.Response response = variantMapper.toResponse(variantRepository.save(variant));
 
@@ -441,6 +442,27 @@ public class ProductServiceImpl implements ProductService {
         safeGenerateEmbedding(variant.getProduct().getId());
 
         return response;
+    }
+
+    /**
+     * Sinh SKU thống nhất tại backend. Ví dụ: SP000123-M-DEN.
+     * Product ID ổn định, còn size/màu giúp SKU dễ đọc và tìm kiếm.
+     */
+    private String generateVariantSku(Long productId, String size, String color) {
+        String productCode = String.format(Locale.ROOT, "SP%06d", productId);
+        return productCode + "-" + normalizeSkuPart(size) + "-" + normalizeSkuPart(color);
+    }
+
+    private String normalizeSkuPart(String value) {
+        String normalized = Normalizer.normalize(value == null ? "" : value.trim(), Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "")
+                .replace('đ', 'd')
+                .replace('Đ', 'D')
+                .toUpperCase(Locale.ROOT)
+                .replaceAll("[^A-Z0-9]+", "-")
+                .replaceAll("^-+|-+$", "");
+
+        return normalized.isBlank() ? "NA" : normalized;
     }
 
     @Override
