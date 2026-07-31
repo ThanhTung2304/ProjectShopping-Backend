@@ -44,18 +44,20 @@ public class VariantDto {
         private String color;
 
         @NotNull(message = "Giá không được để trống")
-        @DecimalMin(value = "0", inclusive = false, message = "Giá phải lớn hơn 0")
+        @DecimalMin(
+                value = "0",
+                inclusive = false,
+                message = "Giá phải lớn hơn 0"
+        )
         private BigDecimal price;
 
-        private BigDecimal salePrice; // Không bắt buộc
+        private BigDecimal salePrice;
 
         @NotNull(message = "Số lượng không được để trống")
         @Min(value = 0, message = "Số lượng không được âm")
         private Integer stockQuantity;
 
-        @NotBlank(message = "SKU không được để trống")
-        private String sku;
-
+        // SKU được backend tự động sinh.
         private Long productId;
     }
 }

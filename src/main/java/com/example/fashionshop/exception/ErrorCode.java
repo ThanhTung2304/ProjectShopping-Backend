@@ -42,6 +42,7 @@ public enum ErrorCode {
     // ===== PRODUCT VARIANT =====
     VARIANT_NOT_FOUND           (HttpStatus.NOT_FOUND,           "Không tìm thấy biến thể sản phẩm"),
     VARIANT_SKU_EXISTS          (HttpStatus.BAD_REQUEST,         "Mã SKU đã tồn tại"),
+    VARIANT_ALREADY_EXISTS      (HttpStatus.BAD_REQUEST,         "Biến thể với size và màu sắc này đã tồn tại"),
     VARIANT_OUT_OF_STOCK        (HttpStatus.BAD_REQUEST,         "Sản phẩm đã hết hàng"),
     VARIANT_NOT_ENOUGH_STOCK    (HttpStatus.BAD_REQUEST,         "Số lượng tồn kho không đủ"),
 
