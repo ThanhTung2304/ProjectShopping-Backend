@@ -49,6 +49,8 @@ public interface ProductVariantRepository
             String color
     );
 
+    Optional<ProductVariant> findTopByProductIdOrderBySkuDesc(Long productId);
+
     List<ProductVariant> findByProductId(Long productId);
 
     // Trừ tồn kho có điều kiện — atomic, chống oversell
@@ -75,4 +77,22 @@ public interface ProductVariantRepository
             @Param("variantId") Long variantId,
             @Param("quantity") int quantity
     );
+
+    @Query("""
+        SELECT COUNT(v)
+        FROM ProductVariant v
+        WHERE v.product.id = :productId
+        AND v.isActive = true
+        """)
+            long countByProductId(
+                    @Param("productId") Long productId
+    );
+
+    @Query("""
+        SELECT MAX(CAST(SUBSTRING(p.productCode,:length) AS integer))
+        FROM Product p
+        WHERE p.productCode LIKE CONCAT(:prefix,'%')
+        """)
+
+    Integer findMaxSkuSequenceByProductId(@Param("productId") Long productId);
 }

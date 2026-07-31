@@ -17,7 +17,15 @@ public class ProductDto {
     @Builder
     @AllArgsConstructor
     public static class Response {
+
         private Long id;
+
+        /**
+         * Mã sản phẩm.
+         * Ví dụ: AKC0001
+         */
+        private String productCode;
+
         private String name;
         private String slug;
         private String description;
@@ -36,8 +44,13 @@ public class ProductDto {
             if (variants == null || variants.isEmpty()) {
                 return BigDecimal.ZERO;
             }
+
             return variants.stream()
-                    .map(v -> v.getSalePrice() != null ? v.getSalePrice() : v.getPrice())
+                    .map(variant ->
+                            variant.getSalePrice() != null
+                                    ? variant.getSalePrice()
+                                    : variant.getPrice()
+                    )
                     .min(BigDecimal::compareTo)
                     .orElse(BigDecimal.ZERO);
         }
@@ -47,7 +60,15 @@ public class ProductDto {
     @Builder
     @AllArgsConstructor
     public static class Summary {
+
         private Long id;
+
+        /**
+         * Mã sản phẩm.
+         * Ví dụ: AKC0001
+         */
+        private String productCode;
+
         private String name;
         private String slug;
         private String categoryName;

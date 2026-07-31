@@ -7,25 +7,41 @@ import org.mapstruct.Mapping;
 
 import java.util.List;
 
-@Mapper(componentModel = "spring", uses = {VariantMapper.class, ProductImageMapper.class})
-// uses = {} → dùng VariantMapper và ProductImageMapper để convert relations
+@Mapper(
+        componentModel = "spring",
+        uses = {
+                VariantMapper.class,
+                ProductImageMapper.class
+        }
+)
 public interface ProductMapper {
 
-    // Entity → Response đầy đủ (kèm variants + images)
+    /**
+     * Entity -> Response đầy đủ.
+     *
+     * productCode được MapStruct tự động map
+     * vì Product và ProductDto.Response cùng tên field.
+     */
     @Mapping(target = "categoryName", source = "category.name")
-    @Mapping(target = "variants",     source = "variants")   // → dùng VariantMapper
-    @Mapping(target = "images",       source = "images")     // → dùng ProductImageMapper
-    @Mapping(target = "averageRating", ignore = true)        // tính riêng trong Service
-    @Mapping(target = "totalReviews",  ignore = true)        // tính riêng trong Service
+    @Mapping(target = "variants", source = "variants")
+    @Mapping(target = "images", source = "images")
+    @Mapping(target = "averageRating", ignore = true)
+    @Mapping(target = "totalReviews", ignore = true)
+    @Mapping(target = "totalStock", ignore = true)
     ProductDto.Response toResponse(Product product);
 
-    // Entity → Summary (chỉ thông tin cơ bản, dùng trong danh sách)
-    @Mapping(target = "categoryName",    source = "category.name")
-    @Mapping(target = "primaryImageUrl", ignore = true)  // xử lý trong Service
-    @Mapping(target = "minPrice",        ignore = true)  // tính từ variants trong Service
-    @Mapping(target = "maxPrice",        ignore = true)  // tính từ variants trong Service
-    @Mapping(target = "averageRating",   ignore = true)
-    @Mapping(target = "totalReviews",    ignore = true)
+    /**
+     * Entity -> Summary.
+     *
+     * productCode cũng được MapStruct tự động map.
+     */
+    @Mapping(target = "categoryName", source = "category.name")
+    @Mapping(target = "primaryImageUrl", ignore = true)
+    @Mapping(target = "minPrice", ignore = true)
+    @Mapping(target = "maxPrice", ignore = true)
+    @Mapping(target = "averageRating", ignore = true)
+    @Mapping(target = "totalReviews", ignore = true)
+    @Mapping(target = "totalStock", ignore = true)
     ProductDto.Summary toSummary(Product product);
 
     List<ProductDto.Summary> toSummaryList(List<Product> products);

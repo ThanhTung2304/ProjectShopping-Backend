@@ -25,11 +25,11 @@ import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.*;
+import java.util.stream.Collectors;
+
 import java.math.BigDecimal;
 import java.text.Normalizer;
-import java.util.List;
-import java.util.Locale;
-import java.util.Set;
 
 @Slf4j
 @Service
@@ -38,6 +38,14 @@ public class ProductServiceImpl implements ProductService {
 
     private static final Set<String> CLOTHING_SIZES = Set.of("S", "M", "L", "XL", "XXL");
     private static final Set<String> FREE_SIZE_VALUES = Set.of("FREE_SIZE", "ONE_SIZE", "FREESIZE");
+    private static final Set<String> STOP_WORDS = Set.of(
+            "VA",
+            "CHO",
+            "CUA",
+            "THE",
+            "FOR",
+            "WITH"
+    );
 
     private final ProductRepository productRepository;
     private final ProductVariantRepository variantRepository;
@@ -100,6 +108,7 @@ public class ProductServiceImpl implements ProductService {
                     return ProductDto.Summary.builder()
                             .id(summary.getId())
                             .name(summary.getName())
+                            .productCode(summary.getProductCode())
                             .slug(summary.getSlug())
                             .categoryName(summary.getCategoryName())
                             .sizeType(summary.getSizeType())
@@ -159,6 +168,7 @@ public class ProductServiceImpl implements ProductService {
         return ProductDto.Summary.builder()
                 .id(summary.getId())
                 .name(summary.getName())
+                .productCode(summary.getProductCode())
                 .slug(summary.getSlug())
                 .categoryName(summary.getCategoryName())
                 .sizeType(summary.getSizeType())
@@ -207,6 +217,7 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
 
         Product product = Product.builder()
+                .productCode(generateProductCode(request.getName()))
                 .name(request.getName())
                 .slug(request.getSlug())
                 .description(request.getDescription())
@@ -384,7 +395,7 @@ public class ProductServiceImpl implements ProductService {
             throw new AppException(ErrorCode.VARIANT_ALREADY_EXISTS);
         }
 
-        String generatedSku = generateVariantSku(product.getId(), normalizedSize, normalizedColor);
+        String generatedSku = generateVariantSku(product);
         if (variantRepository.existsBySku(generatedSku)) {
             throw new AppException(ErrorCode.VARIANT_SKU_EXISTS);
         }
@@ -423,18 +434,11 @@ public class ProductServiceImpl implements ProductService {
             throw new AppException(ErrorCode.VARIANT_ALREADY_EXISTS);
         }
 
-        String generatedSku = generateVariantSku(productId, normalizedSize, normalizedColor);
-        if (!generatedSku.equals(variant.getSku())
-                && variantRepository.existsBySkuAndIdNot(generatedSku, variantId)) {
-            throw new AppException(ErrorCode.VARIANT_SKU_EXISTS);
-        }
-
         variant.setSize(normalizedSize);
         variant.setColor(normalizedColor);
         variant.setPrice(request.getPrice());
         variant.setSalePrice(request.getSalePrice());
         variant.setStockQuantity(request.getStockQuantity());
-        variant.setSku(generatedSku);
 
         VariantDto.Response response = variantMapper.toResponse(variantRepository.save(variant));
 
@@ -444,13 +448,16 @@ public class ProductServiceImpl implements ProductService {
         return response;
     }
 
-    /**
-     * Sinh SKU thống nhất tại backend. Ví dụ: SP000123-M-DEN.
-     * Product ID ổn định, còn size/màu giúp SKU dễ đọc và tìm kiếm.
-     */
-    private String generateVariantSku(Long productId, String size, String color) {
-        String productCode = String.format(Locale.ROOT, "SP%06d", productId);
-        return productCode + "-" + normalizeSkuPart(size) + "-" + normalizeSkuPart(color);
+    private String generateVariantSku(Product product) {
+
+        Integer maxSequence =
+                variantRepository.findMaxSkuSequenceByProductId(product.getId());
+
+        int nextSequence = (maxSequence == null ? 1 : maxSequence + 1);
+
+        return product.getProductCode()
+                + "-"
+                + String.format("%03d", nextSequence);
     }
 
     private String normalizeSkuPart(String value) {
@@ -490,6 +497,7 @@ public class ProductServiceImpl implements ProductService {
 
         return ProductDto.Response.builder()
                 .id(response.getId())
+                .productCode(response.getProductCode())
                 .name(response.getName())
                 .slug(response.getSlug())
                 .description(response.getDescription())
@@ -583,5 +591,43 @@ public class ProductServiceImpl implements ProductService {
         } catch (Exception e) {
             log.error("Không thể xóa embedding cho sản phẩm ID {}: {}", productId, e.getMessage());
         }
+    }
+
+    private String generateProductCode(String productName) {
+
+        String prefix = Arrays.stream(
+                        Normalizer.normalize(productName, Normalizer.Form.NFD)
+                                .replaceAll("\\p{M}+", "")
+                                .replace('đ', 'd')
+                                .replace('Đ', 'D')
+                                .toUpperCase(Locale.ROOT)
+                                .trim()
+                                .split("\\s+")
+                )
+                .filter(word -> !word.isBlank())
+                .filter(word -> !STOP_WORDS.contains(word))
+                .map(word -> word.substring(0, Math.min(1, word.length())))
+                .collect(Collectors.joining());
+
+        if (prefix.length() < 2) {
+            prefix = "SP";
+        }
+
+        Product lastProduct = productRepository
+                .findTopByProductCodeStartingWithOrderByProductCodeDesc(prefix)
+                .orElse(null);
+
+        int nextNumber = 1;
+
+        if (lastProduct != null) {
+
+            String code = lastProduct.getProductCode();
+
+            String numberPart = code.substring(prefix.length());
+
+            nextNumber = Integer.parseInt(numberPart) + 1;
+        }
+
+        return prefix + String.format("%04d", nextNumber);
     }
 }
