@@ -16,26 +16,20 @@ public interface ProductVariantRepository
 
     List<ProductVariant> findByProductIdAndIsActiveTrue(Long productId);
 
+    List<ProductVariant> findByProductId(Long productId);
+
     Optional<ProductVariant> findBySku(String sku);
 
     boolean existsBySku(String sku);
 
     boolean existsBySkuAndIdNot(String sku, Long id);
 
-    /**
-     * Kiểm tra một sản phẩm đã có biến thể với cùng size và màu hay chưa.
-     * IgnoreCase giúp "Đen" và "đen" được coi là cùng một màu.
-     */
     boolean existsByProductIdAndSizeIgnoreCaseAndColorIgnoreCase(
             Long productId,
             String size,
             String color
     );
 
-    /**
-     * Dùng khi cập nhật biến thể.
-     * Bỏ qua chính biến thể đang được sửa.
-     */
     boolean existsByProductIdAndSizeIgnoreCaseAndColorIgnoreCaseAndIdNot(
             Long productId,
             String size,
@@ -49,9 +43,17 @@ public interface ProductVariantRepository
             String color
     );
 
+    /**
+     * Lấy biến thể có SKU lớn nhất của một sản phẩm.
+     *
+     * Ví dụ:
+     * AKC0001-001
+     * AKC0001-002
+     * AKC0001-003
+     *
+     * Kết quả sẽ trả về AKC0001-003.
+     */
     Optional<ProductVariant> findTopByProductIdOrderBySkuDesc(Long productId);
-
-    List<ProductVariant> findByProductId(Long productId);
 
     // Trừ tồn kho có điều kiện — atomic, chống oversell
     @Modifying
@@ -79,20 +81,12 @@ public interface ProductVariantRepository
     );
 
     @Query("""
-        SELECT COUNT(v)
-        FROM ProductVariant v
-        WHERE v.product.id = :productId
-        AND v.isActive = true
-        """)
-            long countByProductId(
-                    @Param("productId") Long productId
+            SELECT COUNT(v)
+            FROM ProductVariant v
+            WHERE v.product.id = :productId
+              AND v.isActive = true
+            """)
+    long countByProductId(
+            @Param("productId") Long productId
     );
-
-    @Query("""
-        SELECT MAX(CAST(SUBSTRING(p.productCode,:length) AS integer))
-        FROM Product p
-        WHERE p.productCode LIKE CONCAT(:prefix,'%')
-        """)
-
-    Integer findMaxSkuSequenceByProductId(@Param("productId") Long productId);
 }
